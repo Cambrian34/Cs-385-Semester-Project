@@ -1,0 +1,142 @@
+module ALU (op,a,b,result,zero);
+   input [16:0] a;
+   input [16:0] b;
+   input [3:0] op;
+   output [16:0] result;
+   output zero;
+   ALU1   alu0 (a[0],b[0],op[3],op[2],op[1:0],set, op[2],c1,result[0]);
+   ALU1   alu1 (a[1],b[1],op[3],op[2],op[1:0],1'b0,c1,   c2,result[1]);
+   ALU1   alu2 (a[2],b[2],op[3],op[2],op[1:0],1'b0,c2,   c3,result[2]);
+   ALU1   alu3 (a[3],b[3],op[3],op[2],op[1:0],1'b0,c3,   c4,result[3]);
+   ALU1   alu4 (a[4],b[4],op[3],op[2],op[1:0],1'b0,c4,   c5,result[4]);
+   ALU1   alu5 (a[5],b[5],op[3],op[2],op[1:0],1'b0,c5,   c6,result[5]);
+   ALU1   alu6 (a[6],b[6],op[3],op[2],op[1:0],1'b0,c6,   c7,result[6]);
+   ALU1   alu7 (a[7],b[7],op[3],op[2],op[1:0],1'b0,c7,   c8,result[7]);
+   ALU1   alu8 (a[8],b[8],op[3],op[2],op[1:0],1'b0,c8,   c9,result[8]);
+   ALU1   alu9 (a[9],b[9],op[3],op[2],op[1:0],1'b0,c9,   c10,result[9]);
+   ALU1   alu10 (a[10],b[10],op[3],op[2],op[1:0],1'b0,c10,   c11,result[10]);
+   ALU1   alu11 (a[11],b[11],op[3],op[2],op[1:0],1'b0,c11,   c12,result[11]);
+   ALU1   alu12 (a[12],b[12],op[3],op[2],op[1:0],1'b0,c12,   c13,result[12]);
+   ALU1   alu13 (a[13],b[13],op[3],op[2],op[1:0],1'b0,c13,   c14,result[13]);
+   ALU1   alu14 (a[14],b[14],op[3],op[2],op[1:0],1'b0,c14,   c15,result[14]);
+   ALUmsb alu15 (a[15],b[15],op[3],op[2],op[1:0],1'b0,c15,   c16,result[15],set);
+   or or1(or01, result[0],result[1]);
+   or or2(or23, result[2],result[3]);
+   nor nor1(zero,or01,or23);
+endmodule
+
+module mux2x1(A,B,select,OUT);
+	input A,B,select;
+	output OUT;
+	wire x,y;
+	and	g1(x,A,~select),
+		g2(y,B,select);
+	or	g3(OUT,x,y);
+endmodule
+
+module mux4x1(i0,i1,i2,i3,select,O); 
+	input i0,i1,i2,i3;
+	input [1:0] select;
+	output O;
+	wire w,x,y,z;
+	and g1(w,i0,~select[1],~select[0]),
+		g2(x,i1,~select[1],select[0]),
+		g3(y,i2,select[1],~select[0]),
+		g4(z,i3,select[1],select[0]);
+	or	g5(O,w,x,y,z);
+endmodule
+
+module decoder (S1,S0,D3,D2,D1,D0); 
+   input S0,S1; 
+   output D0,D1,D2,D3; 
+ 
+   not n1 (notS0,S0),
+       n2 (notS1,S1);
+
+   and a0 (D0,notS1,notS0), 
+       a1 (D1,notS1,   S0), 
+       a2 (D2,   S1,notS0), 
+       a3 (D3,   S1,   S0); 
+endmodule 
+
+module halfadder (S,C,x,y); 
+   input x,y; 
+   output S,C; 
+
+   xor (S,x,y); 
+   and (C,x,y); 
+endmodule 
+
+
+module fulladder (S,C,x,y,z); 
+   input x,y,z; 
+   output S,C; 
+   wire S1,D1,D2;
+
+   halfadder HA1 (S1,D1,x,y), 
+             HA2 (S,D2,S1,z); 
+   or g1(C,D2,D1); 
+endmodule 
+
+module D_flip_flop(D,CLK,Q);
+   input D,CLK; 
+   output Q; 
+   wire CLK1, Y;
+   not  not1 (CLK1,CLK);
+   D_latch D1(D,CLK, Y),
+           D2(Y,CLK1,Q);
+endmodule 
+
+module D_latch(D,C,Q);
+   input D,C; 
+   output Q;
+   wire x,y,D1,Q1; 
+   nand nand1 (x,D, C), 
+        nand2 (y,D1,C), 
+        nand3 (Q,x,Q1),
+        nand4 (Q1,y,Q); 
+   not  not1  (D1,D);
+endmodule
+
+module ALU1 (a,b,ainvert,binvert,op,less,carryin,carryout,result);
+   input a,b,less,carryin,ainvert,binvert;
+   input [1:0] op;
+   output carryout,result;
+   reg result;
+   assign a_inv = ~a;	
+   assign a1 = ainvert? a_inv: a;
+   assign b_inv = ~b;	
+   assign b1 = binvert? b_inv: b; 
+   assign a_and_b = a1 && b1;
+   assign a_or_b = a1 || b1;
+   assign {carryout,sum} = a + b1 + carryin;
+   always @ (a_and_b,a_or_b,sum,less,op) 
+       case (op) 
+          2'b00: result = a_and_b;
+          2'b01: result = a_or_b;
+          2'b10: result = sum;
+          2'b11: result = less;
+       endcase
+endmodule
+
+// 1-bit ALU for the most significant bit
+module ALUmsb (a,b,ainvert,binvert,op,less,carryin,carryout,result,sum);
+   input a,b,less,carryin,ainvert,binvert;
+   input [1:0] op;
+   output carryout,result,sum;
+   reg result;
+   assign a_inv = ~a;
+   assign a1 = ainvert? a_inv: a; 
+   assign b_inv = ~b;
+   assign b1 = binvert? b_inv: b; 
+   assign a_and_b = a1 && b1;
+   assign a_or_b = a1 || b1;
+   assign {carryout,sum} = a + b1 + carryin;
+   always @ (a_and_b,a_or_b,sum,less,op) 
+       case (op) 
+          2'b00: result = a_and_b;
+          2'b01: result = a_or_b;
+          2'b10: result = sum;
+          2'b11: result = less;
+       endcase 
+endmodule

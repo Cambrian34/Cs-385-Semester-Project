@@ -1,0 +1,180 @@
+
+
+module halfadder(S,C,x,y);
+//S = sum
+//C = carry
+
+input x,y;
+output S,C;
+
+xor x1 (S,x,y);
+and a1 (C,x,y);
+
+endmodule
+
+module fulladder (S,C,x,y,z);
+input x,y,z;
+output S,C;
+wire S1,C1,C2;
+
+halfadder HA1 (S1,C1,x,y),
+          HA2 (S,C2,S1,z);
+    or C3(C,C2,C1);    
+endmodule 
+
+module mux4x1(i0,i1,i2,i3,select,y); 
+  input i0,i1,i2,i3; 
+  input [1:0] select; 
+  output y;
+  
+  mux2x1 mux1(i0, i1, select[0], m1);
+  mux2x1 mux2(i2, i3, select[0], m2);
+  mux2x1 mux3(m1, m2, select[1], y);
+endmodule
+
+module detect_overflow(overflow, carry_in, carry_out, op);
+	input carry_in, carry_out;
+	input [2:0] op;
+	output overflow;
+	wire nop, arith, over;
+	
+	not    g1(nop,op[0]);
+	and    g2(arith, nop, op[1]);
+	xor    g3(over, carry_in, carry_out);
+	mux_2 mux(overflow,1'b0,over,arith);
+endmodule
+
+module mux_2(result,a,b,c);
+	input a,b,c;
+	output result;
+	wire w1,w2,w3;
+
+	not (w3,c);
+	and g1(w1,b,c),
+	    g2(w2,a,w3);
+	or  g3(result,w1,w2);
+endmodule
+
+
+//          a,  b,     Binvert,      Operation,         Cin, less,     Cout,   Result
+
+
+module ALU1 (a,b,binvert,op,less,carryin,carryout,result);
+  input a,b,less,carryin,binvert;
+  input [1:0] op;
+  output carryout,result;
+  wire sum, a_and_b, a_or_b, b_inv;
+
+  not not1(b_inv, b);
+  mux2x1 mux1(b,b_inv,binvert,b1);
+  and and1(a_and_b, a, b);
+  or or1(a_or_b, a, b);
+  fulladder adder1(sum,carryout,a,b1,carryin);
+  mux4x1 mux2(a_and_b,a_or_b,sum,less,op[1:0],result); 
+
+endmodule
+
+
+// 1-bit ALU for the most significant bit
+
+module ALUmsb (a,b,binvert,op,less,carryin,carryout,result,sum);
+  input a,b,less,carryin,binvert;
+  input [1:0] op;
+  output carryout,result,sum;
+  wire sum, a_and_b, a_or_b, b_inv;
+
+  not not1(b_inv, b);
+  mux2x1 mux1(b,b_inv,binvert,b1);
+  and and1(a_and_b, a, b);
+  or or1(a_or_b, a, b);
+  fulladder adder1(sum,carryout,a,b1,carryin);
+  mux4x1 mux2(a_and_b,a_or_b,sum,less,op[1:0],result); 
+
+endmodule
+
+module ALU(a,b,op,zero,Overflow,result);
+
+input [15:0] a,b;
+input [3:0] op;
+wire [15:0] Carryout;
+output [15:0]result;
+output zero,Overflow;
+wire set;
+//               a,b, ainvert, binvert,op,    less,carryin,carryout,result
+wire c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15,c16;
+
+  ALU1   alu0  (a[0], b[0], op[2],op[1:0],set,op[2],c1, result[0]);
+  ALU1   alu1  (a[1], b[1], op[2],op[1:0],1'b0,  c1,   c2, result[1]);
+  ALU1   alu2  (a[2], b[2], op[2],op[1:0],1'b0,  c2,   c3, result[2]);
+  ALU1   alu3  (a[3], b[3], op[2],op[1:0],1'b0,  c3,   c4, result[3]);
+  ALU1   alu4  (a[4], b[4], op[2],op[1:0],1'b0,  c4,   c5, result[4]);
+  ALU1   alu5  (a[5], b[5], op[2],op[1:0],1'b0,  c5,   c6, result[5]);
+  ALU1   alu6  (a[6], b[6], op[2],op[1:0],1'b0,  c6,   c7, result[6]);
+  ALU1   alu7  (a[7], b[7], op[2],op[1:0],1'b0,  c7,   c8, result[7]);
+  ALU1   alu8  (a[8], b[8], op[2],op[1:0],1'b0,  c8,   c9, result[8]);
+  ALU1   alu9  (a[9], b[9], op[2],op[1:0],1'b0,  c9,   c10,result[9]);
+  ALU1   alu10 (a[10],b[10],op[2],op[1:0],1'b0,  c10,  c11,result[10]);
+  ALU1   alu11 (a[11],b[11],op[2],op[1:0],1'b0,  c11,  c12,result[11]);
+  ALU1   alu12 (a[12],b[12],op[2],op[1:0],1'b0,  c12,  c13,result[12]);
+  ALU1   alu13 (a[13],b[13],op[2],op[1:0],1'b0,  c13,  c14,result[13]);
+  ALU1   alu14 (a[14],b[14],op[2],op[1:0],1'b0,  c14,  c15,result[14]);
+  ALUmsb alu15 (a[15],b[15],op[2],op[1:0],1'b0,  c15,  c16,result[15],set);
+
+   nor nor1(zero,result[0],result[1],result[2],result[3],result[4],result[5],result[6],result[7],result[8],result[9],result[10],result[11],result[12],result[13],result[14],result[15]);
+
+
+// Zero == xor of all result values
+// full adder sum is equal to carryout
+//1'b0 shows that the zero is one bit
+//Overflow =xor of Carryin and Carryout
+endmodule
+
+module mux2x1(A,B,select,OUT); 
+  input A,B,select; 
+  output OUT;
+
+  not not1(i0, select);
+  and and1(i1, A, i0);
+  and and2(i2, B, select);
+  or or1(OUT, i1, i2);
+endmodule
+
+module ins;
+
+reg  signed[15:0] a,b;
+reg  [3:0] Op;
+wire signed [15:0]Result;
+
+wire reg Zero,Overflow;
+
+ALU alui(a,b,Op,Zero,Overflow,Result);
+
+initial begin
+    $display("   Op  a          b      Result   Zero    Overflow ");
+    $monitor(" %b %b(%d) %b(%d)  %b(%d)   %b        %b", Op,a,a,b,b,Result,Result, Zero, Overflow);
+           Op = 4'b0000; a = 16'b111111111111111; b = 4'b0010;  // AND
+        #1 Op = 4'b0001; a = 4'b0101; b = 4'b0010;  // OR
+        #1 Op = 4'b0010; a = 4'b0101; b = 4'b0001;  // ADD
+        #1 Op = 4'b0010; a = 16'b111111111111110; b = 4'b0010;  // ADD with overflow (8+1=-8)
+        #1 Op = 4'b0110; a = 5'b10010; b = 4'b0001;  // SUB
+        #1 Op = 4'b0110; a = 4'b1111; b = 4'b0001;  // SUB
+        #1 Op = 4'b0110; a = 4'b1111; b = 4'b1000;  // SUB with overflow (-1-(-8)=7)
+        #1 Op = 4'b0111; a = 4'b0101; b = 4'b0001;  // SLT
+        #1 Op = 4'b0111; a = 4'b0001; b = 4'b0011;  // SLT
+        #1 Op = 4'b1100; a = 4'b0001; b = 4'b0011;  // Nor
+        #1 Op = 4'b1101; a = 4'b0001; b = 4'b0011;  // Nand
+
+end
+endmodule
+/* Test Results
+op  a        b        result   zero overflow
+000 0111( 7) 0010( 2) 0010( 2) 0    0
+001 0101( 5) 0010( 2) 0111( 7) 0    0
+010 0101( 5) 0001( 1) 0110( 6) 0    0
+010 0111( 7) 0001( 1) 1000(-8) 0    1
+110 0101( 5) 0001( 1) 0100( 4) 0    0
+110 1111(-1) 0001( 1) 1110(-2) 0    0
+110 1111(-1) 1000(-8) 0111( 7) 0    1
+111 0101( 5) 0001( 1) 0000( 0) 1    0
+111 0001( 1) 0011( 3) 0001( 1) 0    0
+*/

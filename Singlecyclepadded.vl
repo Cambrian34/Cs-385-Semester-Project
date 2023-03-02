@@ -39,19 +39,11 @@ module detect_overflow(overflow, carry_in, carry_out, op);
 	not    g1(nop,op[0]);
 	and    g2(arith, nop, op[1]);
 	xor    g3(over, carry_in, carry_out);
-	mux_2 mux(overflow,1'b0,over,arith);
+	mux2x1 mux(1'b0,over,arith,overflow);
+	
 endmodule
 
-module mux_2(result,a,b,c);
-	input a,b,c;
-	output result;
-	wire w1,w2,w3;
 
-	not (w3,c);
-	and g1(w1,b,c),
-	    g2(w2,a,w3);
-	or  g3(result,w1,w2);
-endmodule
 
 //Alistair Chambers
 
@@ -137,15 +129,16 @@ mux4x1 mux2(andout,orout,Sum,less,op[1:0],Result);
 
 endmodule
 
-module mux2x1(A,B,select,OUT); 
-  input A,B,select; 
-  output OUT;
-
-  not not1(i0, select);
-  and and1(i1, A, i0);
-  and and2(i2, B, select);
-  or or1(OUT, i1, i2);
+module mux2x1(x,y,z,S); 
+input x,y,z;
+output S;
+wire c0,c1,c2;
+not n1(c0,z);
+and n2(c1,x,c0);
+and n3(c2,y,z);
+or  n4(S,c1,c2);
 endmodule
+
 
 module reg_file(rr1,rr2,wr,wd,regwrite,rd1,rd2,clock);
 
@@ -371,14 +364,22 @@ module CPU (clock,PC,ALUOut,IR);
   end
   initial PC = 0;
   assign IR = IMemory[PC>>2];
-  assign WR = (RegDst) ? IR[15:11]: IR[20:16]; // RegDst Mux
-  assign B  = (ALUSrc) ? SignExtend: RD2; // ALUSrc Mux 
+  //assign WR = (RegDst) ? IR[15:11]: IR[20:16]; // RegDst Mux
+  //assign B  = (ALUSrc) ? SignExtend: RD2; // ALUSrc Mux 
+   //assign wr
+   mux2bit2x1 mx4(IR[20:16],IR[15:11],RegDst,WR);
+  //assign B
+   mux16bit2x1 mx2(RD2,SignExtend,ALUSrc,B);
+  
   assign SignExtend = {{16{IR[15]}},IR[15:0]}; // sign extension unit
+  
   reg_file rf (IR[25:21],IR[20:16],WR,ALUOut,RegWrite,A,RD2,clock);
   ALU fetch (4'b0010,PC,4,NextPC,Unused);
   ALU ex (ALUctl, A, B, ALUOut, Zero);
+  
   MainControl MainCtr (IR[31:26],{RegDst,ALUSrc,RegWrite,ALUOp}); 
   ALUControl ALUCtrl(ALUOp, IR[5:0], ALUctl); // ALU control unit
+  
   always @(negedge clock) begin 
     PC <= NextPC;
   end

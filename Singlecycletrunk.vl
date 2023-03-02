@@ -336,15 +336,15 @@ module ALUControl (ALUOp,FuncCode,ALUCtl);
   input [5:0] FuncCode;
   output reg [3:0] ALUCtl;
   always @(ALUOp,FuncCode) case (ALUOp)
-    2'b00: ALUCtl <= 4'b0010; // add
-    2'b01: ALUCtl <= 4'b0110; // subtract
+   2'b00: ALUCtl <= 4'b0000; // add
+    2'b01: ALUCtl <= 4'b0001; // subtract
     2'b10: case (FuncCode)
-	     32: ALUCtl <= 4'b0010; // add
-	     34: ALUCtl <= 4'b0110; // sub
-	     36: ALUCtl <= 4'b0000; // and
-	     37: ALUCtl <= 4'b0001; // or
-	     39: ALUCtl <= 4'b1100; // nor
-	     42: ALUCtl <= 4'b0111; // slt
+	     32: ALUCtl <= 4'b0000; // add
+	     34: ALUCtl <= 4'b0001; // sub
+	     36: ALUCtl <= 4'b0010; // and
+	     37: ALUCtl <= 4'b0011; // or
+	     39: ALUCtl <= 4'b0100; // nor
+	     42: ALUCtl <= 4'b0110; // slt 
     endcase
   endcase
 endmodule
@@ -360,15 +360,15 @@ module CPU (clock,PC,ALUOut,IR);
   wire [1:0] WR; 
 // Test Program
   initial begin 
-        //                                           Assembly     | Result |      Binary IR      
+         //                                           Assembly     | Result |      Binary IR      
         //                                  ----------------------------------------------------
         IMemory[0] = 16'b0111_00_01_00001111;   // addi $t1, $0,  15   ($t1=15)  0111 00 01 00001111     
         IMemory[1] = 16'b0111_00_10_00000111;   // addi $t2, $0,  7    ($t2= 7)  0111 00 10 00000111     
-        IMemory[2] = 16'b0000_01_10_11_000000;  // and  $t3, $t1, $t2  ($t3= 7)  0000 01 10 11 xxxxxx   
+        IMemory[2] = 16'b0010_01_10_11_000000;  // and  $t3, $t1, $t2  ($t3= 7)  0010 01 10 11 xxxxxx   
         IMemory[3] = 16'b0001_01_11_10_000000;  // sub  $t2, $t1, $t3  ($t2= 8)  0001 01 11 10 xxxxxx    
         IMemory[4] = 16'b0011_10_11_10_000000;  // or   $t2, $t2, $t3  ($t2=15)  0011 10 11 10 xxxxxx    
         IMemory[5] = 16'b0000_10_11_11_000000;  // add  $t3, $t2, $t3  ($t3=22)  0000 10 11 11 xxxxxx   
-        IMemory[7] = 16'b0100_10_11_01_000000;  // nor  $t1, $t2, $t3  ($t1=-32) 0100 10 11 01 xxxxxx
+        IMemory[6] = 16'b0100_10_11_01_000000;  // nor  $t1, $t2, $t3  ($t1=-32) 0100 10 11 01 xxxxxx
         IMemory[7] = 16'b0110_11_10_01_000000;  // slt  $t1, $t3, $t2  ($t1= 0)  0110 11 10 01 xxxxxx    
         IMemory[8] = 16'b0110_10_11_01_000000;  // slt  $t1, $t2, $t3  ($t1= 1)  0110 10 11 01 xxxxxx    
     end
@@ -381,6 +381,7 @@ module CPU (clock,PC,ALUOut,IR);
   reg_file rf (IR[11:10], IR[9:8], WR, ALUOut, RegWrite, A, RD2, clock);
   ALU fetch (4'b0010, PC, 16'b0000000000000100, NextPC, Unused);
   ALU ex (ALUctl, A, B, ALUOut, Zero);
+
   MainControl MainCtr (IR[15:12],{RegDst,ALUSrc,RegWrite,ALUOp}); 
   ALUControl ALUCtrl(ALUOp, IR[5:0], ALUctl); // ALU control unit
   always @(negedge clock) begin 
@@ -423,3 +424,5 @@ Clock PC   IR                                 WD
 0     32   00000001010010110100100000101010    1 (00000000000000000000000000000001)
 1     32   00000001010010110100100000101010    1 (00000000000000000000000000000001)
 */
+
+

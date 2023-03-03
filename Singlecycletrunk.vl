@@ -374,8 +374,13 @@ module CPU (clock,PC,ALUOut,IR);
     end
   initial PC = 0;
   assign IR = IMemory[PC>>2];
-  assign WR = (RegDst) ? IR[7:6]: IR[9:8]; // RegDst Mux
-  assign B  = (ALUSrc) ? SignExtend: RD2; // ALUSrc Mux 
+  //assign WR = (RegDst) ? IR[7:6]: IR[9:8]; // RegDst Mux
+  //assign B  = (ALUSrc) ? SignExtend: RD2; // ALUSrc Mux 
+
+  //assign wr
+   mux2bit2x1 mx4(IR[20:16],IR[15:11],RegDst,WR);
+  //assign B
+   mux16bit2x1 mx2(RD2,SignExtend,ALUSrc,B);
   
   assign SignExtend = {{8{IR[7]}},IR[7:0]}; // sign extension unit
   reg_file rf (IR[11:10], IR[9:8], WR, ALUOut, RegWrite, A, RD2, clock);

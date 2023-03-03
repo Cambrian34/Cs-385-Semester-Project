@@ -20,7 +20,6 @@ halfadder HA1 (S1,C1,x,y),
     or C3(C,C2,C1);    
 endmodule 
 
-
 module mux4x1(i0,i1,i2,i3,select,y); 
   input i0,i1,i2,i3; 
   input [1:0] select; 
@@ -147,8 +146,9 @@ module mux2x1(A,B,select,OUT);
   and and2(i2, B, select);
   or or1(OUT, i1, i2);
 endmodule
-
+//.             RR1,RR2,WR,WD,RegWrite,RD1,RD2,clock
 module reg_file(rr1,rr2,wr,wd,regwrite,rd1,rd2,clock);
+
 
    input [1:0] rr1,rr2,wr;
    input [15:0] wd;
@@ -321,82 +321,14 @@ endmodule
 
 
 
-
-module CPU (clock,PC,AluOut, IR);
-
-    input clock;
-    output [15:0] AluOut, IR,PC;
-    reg [15:0] PC;
-    reg[15:0] IMemory[0:511];
-    wire [15:0] IR, NextPC, A, B, AluOut, RD2, SignExtend;
-    wire [3:0] AluCtrl;
-  wire [1:0] ALUOp;
-    wire [1:0] WR;
-
-    /* Test Program */
-    initial begin 
-        //                                           Assembly     | Result |      Binary IR       | Hex IR | Hex Result
-        //                                  -----------------------------------------------------------------------------
-        IMemory[0] = 16'b0100_00_01_00001111;  // addi $t1, $0,  15   ($t1=15)  0100 00 01 00001111     410f      000f
-        IMemory[1] = 16'b0100_00_10_00000111;  // addi $t2, $0,  7    ($t2= 7)  0100 00 10 00000111     4207      0007
-        IMemory[2] = 16'b0000_01_10_11_000000;  // and  $t3, $t1, $t2  ($t3= 7)  0000 01 10 11 xxxxxx    06c0      0007
-        IMemory[3] = 16'b0110_01_11_10_000000;  // sub  $t2, $t1, $t3  ($t2= 8)  0110 01 11 10 xxxxxx    6780      0008
-        IMemory[4] = 16'b0001_10_11_10_000000;  // or   $t2, $t2, $t3  ($t2=15)  0001 10 11 10 xxxxxx    1b80      000f
-        IMemory[5] = 16'b0010_10_11_11_000000;  // add  $t3, $t2, $t3  ($t3=22)  0010 10 11 11 xxxxxx    2bc0      0016
-        IMemory[6] = 16'b0111_11_10_01_000000;  // slt  $t1, $t3, $t2  ($t1= 0)  0111 11 10 01 xxxxxx    7e40      0000
-        IMemory[7] = 16'b0111_10_11_01_000000;  // slt  $t1, $t2, $t3  ($t1= 1)  0111 10 11 01 xxxxxx    7b40      0001
-    end
-    // 32 bit version                                       Assembly 
-    //-----------------------------------------------------------------------------
-    //initial begin 
-    //IMemory[0] = 32'h2009000f;  // addi $t1, $0,  15   ($t1=15)
-    //IMemory[1] = 32'h200a0007;  // addi $t2, $0,  7    ($t2=7)
-    //IMemory[2] = 32'h012a5824;  // and  $t3, $t1, $t2  ($t3=7)
-    //IMemory[3] = 32'h012b5022;  // sub  $t2, $t1, $t3  ($t2=8)
-    //IMemory[4] = 32'h014b5025;  // or   $t2, $t2, $t3  ($t2=15)
-    //IMemory[5] = 32'h014b5820;  // add  $t3, $t2, $t3  ($t3=22)
-    //IMemory[6] = 32'h014b4827;  // nor  $t1, $t2, $t3  ($t1=-32)
-    //IMemory[7] = 32'h016a482a;  // slt  $t1, $t3, $t2  ($t1=0)
-    //IMemory[8] = 32'h014b482a;  // slt  $t1, $t2, $t3  ($t1=1)
-    //end
-
-    
-    initial PC = 0;
-
-    assign IR = IMemory[PC>>2];
-    
-    // assign WR
-    mux2bit2x1 muxWR (IR[9:8], IR[7:6], RegDst, WR);
-    // assign B
-    mux16bit2x1 muxB (RD2, SignExtend, AluSrc, B);
-
-    assign SignExtend = {{8{IR[7]}},IR[7:0]};
-
-    reg_file rf (IR[11:10], IR[9:8], WR, AluOut, RegWrite, A, RD2, clock);
-
-    ALU fetch (4'b0010, PC, 16'b0, NextPC, Unused);
-
-    ALU exec (AluCtrl, A, B, AluOut, Zero);
-
-  MainControl main (IR[15:12], {RegDst, AluSrc, RegWrite, ALUOp});
-
-  ALUControl ALUCtrl(ALUOp, IR[5:0], AluCtrl);
-
-    always @(negedge clock) begin
-        PC <= NextPC;
-    end
-    
-endmodule
-
-module MainControl(Op,Control);
+module MainControl (Op,Control); 
   input [3:0] Op;
   output reg [4:0] Control;
 // Control bits: RegDst,ALUSrc,RegWrite,ALUOp
   always @(Op) case (Op)
-    4'b0000: Control <= 5'b10110; // Rtype
-    4'b1000: Control <= 5'b01100; // ADDI
+    6'b0000: Control <= 5'b10110; // Rtype
+    6'b0010: Control <= 5'b01100; // ADDI
   endcase
- 
 endmodule
 
 module ALUControl (ALUOp,FuncCode,ALUCtl); 
@@ -404,17 +336,62 @@ module ALUControl (ALUOp,FuncCode,ALUCtl);
   input [5:0] FuncCode;
   output reg [3:0] ALUCtl;
   always @(ALUOp,FuncCode) case (ALUOp)
-    2'b00: ALUCtl <= 4'b0010; // add
-    2'b01: ALUCtl <= 4'b0110; // subtract
+   2'b00: ALUCtl <= 4'b0000; // add
+    2'b01: ALUCtl <= 4'b0001; // subtract
     2'b10: case (FuncCode)
-	     32: ALUCtl <= 4'b0010; // add
-	     34: ALUCtl <= 4'b0110; // sub
-	     36: ALUCtl <= 4'b0000; // and
-	     37: ALUCtl <= 4'b0001; // or
-	     39: ALUCtl <= 4'b1100; // nor
-	     42: ALUCtl <= 4'b0111; // slt
+	     32: ALUCtl <= 4'b0000; // add
+	     34: ALUCtl <= 4'b0001; // sub
+	     36: ALUCtl <= 4'b0010; // and
+	     37: ALUCtl <= 4'b0011; // or
+	     39: ALUCtl <= 4'b0100; // nor
+	     42: ALUCtl <= 4'b0110; // slt 
     endcase
   endcase
+endmodule
+
+module CPU (clock,PC,ALUOut,IR);
+  input clock;
+  output [15:0] ALUOut,IR,PC;
+  reg[15:0] PC;
+  reg[15:0] IMemory[0:511];
+  wire [15:0] IR,NextPC,A,B,ALUOut,RD2,SignExtend;
+  wire [3:0] ALUctl;
+  wire [1:0] ALUOp;
+  wire [1:0] WR; 
+// Test Program
+  initial begin 
+         //                                           Assembly     | Result |      Binary IR      
+        //                                  ----------------------------------------------------
+        IMemory[0] = 16'b0111_00_01_00001111;   // addi $t1, $0,  15   ($t1=15)  0111 00 01 00001111     
+        IMemory[1] = 16'b0111_00_10_00000111;   // addi $t2, $0,  7    ($t2= 7)  0111 00 10 00000111     
+        IMemory[2] = 16'b0010_01_10_11_000000;  // and  $t3, $t1, $t2  ($t3= 7)  0010 01 10 11 xxxxxx   
+        IMemory[3] = 16'b0001_01_11_10_000000;  // sub  $t2, $t1, $t3  ($t2= 8)  0001 01 11 10 xxxxxx    
+        IMemory[4] = 16'b0011_10_11_10_000000;  // or   $t2, $t2, $t3  ($t2=15)  0011 10 11 10 xxxxxx    
+        IMemory[5] = 16'b0000_10_11_11_000000;  // add  $t3, $t2, $t3  ($t3=22)  0000 10 11 11 xxxxxx   
+        IMemory[6] = 16'b0100_10_11_01_000000;  // nor  $t1, $t2, $t3  ($t1=-32) 0100 10 11 01 xxxxxx
+        IMemory[7] = 16'b0110_11_10_01_000000;  // slt  $t1, $t3, $t2  ($t1= 0)  0110 11 10 01 xxxxxx    
+        IMemory[8] = 16'b0110_10_11_01_000000;  // slt  $t1, $t2, $t3  ($t1= 1)  0110 10 11 01 xxxxxx    
+    end
+  initial PC = 0;
+  assign IR = IMemory[PC>>2];
+  //assign WR = (RegDst) ? IR[7:6]: IR[9:8]; // RegDst Mux
+  //assign B  = (ALUSrc) ? SignExtend: RD2; // ALUSrc Mux 
+
+  //assign wr
+   mux2bit2x1 mx4(IR[9:8],IR[7:6],RegDst,WR);
+  //assign B
+   mux16bit2x1 mx2(RD2,SignExtend,ALUSrc,B);
+  
+  assign SignExtend = {{8{IR[7]}},IR[7:0]}; // sign extension unit
+  reg_file rf (IR[11:10], IR[9:8], WR, ALUOut, RegWrite, A, RD2, clock);
+  ALU fetch (4'b0010, PC, 16'b100, NextPC, Unused);
+  ALU ex (ALUctl, A, B, ALUOut, Zero);
+
+  MainControl MainCtr (IR[15:12],{RegDst,ALUSrc,RegWrite,ALUOp}); 
+  ALUControl ALUCtrl(ALUOp, IR[5:0], ALUctl); // ALU control unit
+  always @(negedge clock) begin 
+    PC <= NextPC;
+  end
 endmodule
 
 
@@ -452,3 +429,4 @@ Clock PC   IR                                 WD
 0     32   00000001010010110100100000101010    1 (00000000000000000000000000000001)
 1     32   00000001010010110100100000101010    1 (00000000000000000000000000000001)
 */
+

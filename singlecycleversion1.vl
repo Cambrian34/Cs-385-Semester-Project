@@ -62,23 +62,25 @@ module ALU (op,a,b,result,zero);
    output [15:0] result;
    output zero;
    //              a,   b,Ainvert,binvert,op,less,carryin,       carryout,     result
-   ALU1   alu0 (a[0],b[0],op[3],op[2],op[1:0],set, op[2],c1,result[0]);
-   ALU1   alu1 (a[1],b[1],op[3],op[2],op[1:0],1'b0,c1,   c2,result[1]);
-   ALU1   alu2 (a[2],b[2],op[3],op[2],op[1:0],1'b0,c2,   c3,result[2]);
-   ALU1   alu3 (a[3],b[3],op[3],op[2],op[1:0],1'b0,c3,   c4,result[3]);
-   ALU1   alu4 (a[4],b[4],op[3],op[2],op[1:0],1'b0,c4,   c5,result[4]);
-   ALU1   alu5 (a[5],b[5],op[3],op[2],op[1:0],1'b0,c5,   c6,result[5]);
-   ALU1   alu6 (a[6],b[6],op[3],op[2],op[1:0],1'b0,c6,   c7,result[6]);
-   ALU1   alu7 (a[7],b[7],op[3],op[2],op[1:0],1'b0,c7,   c8,result[7]);
-   ALU1   alu8 (a[8],b[8],op[3],op[2],op[1:0],1'b0,c8,   c9,result[8]);
-   ALU1   alu9 (a[9],b[9],op[3],op[2],op[1:0],1'b0,c9,   c10,result[9]);
-   ALU1   alu10 (a[10],b[10],op[3],op[2],op[1:0],1'b0,c10,   c11,result[10]);
-   ALU1   alu11 (a[11],b[11],op[3],op[2],op[1:0],1'b0,c11,   c12,result[11]);
-   ALU1   alu12 (a[12],b[12],op[3],op[2],op[1:0],1'b0,c12,   c13,result[12]);
-   ALU1   alu13 (a[13],b[13],op[3],op[2],op[1:0],1'b0,c13,   c14,result[13]);
-   ALU1   alu14 (a[14],b[14],op[3],op[2],op[1:0],1'b0,c14,   c15,result[14]);
-   ALUmsb alu15 (a[15],b[15],op[3],op[2],op[1:0],1'b0,c15,   c16,result[15],set);
-   nor nor1(zero,result[0],result[1],result[2],result[3],result[4],result[5],result[6],result[7],result[8],result[9],result[10],result[11],result[12],result[13],result[14],result[15]);
+ALU1  alu0 (a[0],b[0],op[3],op[2],op[1:0],set, op[2],  c1,result[0]),
+      alu1 (a[1],b[1],op[3],op[2],op[1:0],1'b0,c1 ,    c2,result[1]),
+      alu2 (a[2],b[2],op[3],op[2],op[1:0],1'b0,c2 ,    c3,result[2]),
+      alu3 (a[3],b[3],op[3],op[2],op[1:0],1'b0,c3 ,    c4,result[3]),
+      alu4 (a[4],b[4],op[3],op[2],op[1:0],1'b0,c4 ,    c5,result[4]),
+      alu5 (a[5],b[5],op[3],op[2],op[1:0],1'b0,c5 ,    c6,result[5]),
+      alu6 (a[6],b[6],op[3],op[2],op[1:0],1'b0,c6 ,    c7,result[6]),
+      alu7 (a[7],b[7],op[3],op[2],op[1:0],1'b0,c7 ,    c8,result[7]),
+      alu8 (a[8],b[8],op[3],op[2],op[1:0],1'b0,c8 ,    c9,result[8]),
+      alu9 (a[9],b[9],op[3],op[2],op[1:0],1'b0,c9 ,   c10,result[9]),
+      alu10(a[10],b[10],op[3],op[2],op[1:0],1'b0,c10,c11,result[10]),
+      alu11(a[11],b[11],op[3],op[2],op[1:0],1'b0,c11,c12,result[11]),
+      alu12(a[12],b[12],op[3],op[2],op[1:0],1'b0,c12,c13,result[12]),
+      alu13(a[13],b[13],op[3],op[2],op[1:0],1'b0,c13,c14,result[13]),
+      alu14(a[14],b[14],op[3],op[2],op[1:0],1'b0,c14,c15,result[14]);
+
+  ALUmsb alu15 (a[15],b[15],op[3],op[2],op[1:0],1'b0,c15,   c16,result[15],set);
+   
+  nor nor1(zero,result[0],result[1],result[2],result[3],result[4],result[5],result[6],result[7],result[8],result[9],result[10],result[11],result[12],result[13],result[14],result[15]);
 
 endmodule
 
@@ -319,10 +321,10 @@ endmodule
 
 
 
-module CPU (clock,AluOut, IR);
+module CPU (clock,PC,AluOut, IR);
 
     input clock;
-    output [15:0] AluOut, IR;
+    output [15:0] AluOut, IR,PC;
     reg [15:0] PC;
     reg[15:0] IMemory[0:511];
     wire [15:0] IR, NextPC, A, B, AluOut, RD2, SignExtend;
@@ -343,7 +345,7 @@ module CPU (clock,AluOut, IR);
         IMemory[6] = 16'b0111_11_10_01_000000;  // slt  $t1, $t3, $t2  ($t1= 0)  0111 11 10 01 xxxxxx    7e40      0000
         IMemory[7] = 16'b0111_10_11_01_000000;  // slt  $t1, $t2, $t3  ($t1= 1)  0111 10 11 01 xxxxxx    7b40      0001
     end
-    //                                        Assembly 
+    // 32 bit version                                       Assembly 
     //-----------------------------------------------------------------------------
     //initial begin 
     //IMemory[0] = 32'h2009000f;  // addi $t1, $0,  15   ($t1=15)
@@ -375,9 +377,9 @@ module CPU (clock,AluOut, IR);
 
     ALU exec (AluCtrl, A, B, AluOut, Zero);
 
-    MainControl main (IR[15:12], {RegDst, AluSrc, RegWrite, AluCtrl});
+  MainControl main (IR[15:12], {RegDst, AluSrc, RegWrite, ALUOp});
 
-    //ALUControl ALUCtrl(ALUOp, IR[5:0], ALUctl);
+  ALUControl ALUCtrl(ALUOp, IR[5:0], AluCtrl);
 
     always @(negedge clock) begin
         PC <= NextPC;
@@ -387,32 +389,13 @@ endmodule
 
 module MainControl(Op,Control);
   input [3:0] Op;
-  output reg [6:0] Control;
-
+  output reg [4:0] Control;
+// Control bits: RegDst,ALUSrc,RegWrite,ALUOp
   always @(Op) case (Op)
-    4'b0000: Control <= 10'b1001000010;  //add
-    4'b0001: Control <=	10'b1001000110;	//sub
-    4'b0010: Control <=	10'b1001000000;	//and
-    4'b0011: Control <=	10'b1001000001;	//or
-    4'b0100: Control <=	6'b011010;	//nor
-    4'b0101: Control <= 6'b101111;	//nand
-    4'b0110: Control <= 6'b101010;  //slt
-    4'b0111: Control <=	6'b101110;	//addi
-    4'b1000: Control <=	6'b101000;	//lw
-    4'b1001: Control <=	6'b101001;	//sw
-    4'b1010: Control <=	6'b011010;	//beq
-    4'b1011: Control <= 6'b101111;	//bne
+    4'b0000: Control <= 5'b10110; // Rtype
+    4'b1000: Control <= 5'b01100; // ADDI
   endcase
-  
-  //always @(Op) case (Op)
-    //    3'b000: Control <= 6'b101000; // AND
-    //    3'b001: Control <= 6'b101001; // OR 
-    //    3'b010: Control <= 6'b101010; // ADD
-    //    3'b100:Control <= 6'b011010; // ADDI 
-    //    3'b110: Control <= 6'b101110; // SUB
-    //    3'b111: Control <= 6'b101111; // SLT
-    //endcase
-
+ 
 endmodule
 
 module ALUControl (ALUOp,FuncCode,ALUCtl); 
@@ -438,7 +421,7 @@ module test ();
   reg clock;
   wire signed [15:0] WD,IR,PC;
   
-  CPU test_cpu(clock,WD,IR);
+  CPU test_cpu(clock,PC,WD,IR);
   always #1 clock = ~clock;
   initial begin
     $display ("Clock PC   IR                                 WD");

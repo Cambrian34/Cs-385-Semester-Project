@@ -1,0 +1,157 @@
+//Alistair Chambers
+
+module ALU (op,a,b,result,zero);
+   input [15:0] a;
+   input [15:0] b;
+   input [3:0] op;
+   output [15:0] result;
+   output zero;
+   //              a,   b,Ainvert,binvert,op,less,carryin,       carryout,     result
+   ALU1   alu0 (a[0],b[0],op[3],op[2],op[1:0],set, op[2],c1,result[0]);
+   ALU1   alu1 (a[1],b[1],op[3],op[2],op[1:0],1'b0,c1,   c2,result[1]);
+   ALU1   alu2 (a[2],b[2],op[3],op[2],op[1:0],1'b0,c2,   c3,result[2]);
+   ALU1   alu3 (a[3],b[3],op[3],op[2],op[1:0],1'b0,c3,   c4,result[3]);
+   ALU1   alu4 (a[4],b[4],op[3],op[2],op[1:0],1'b0,c4,   c5,result[4]);
+   ALU1   alu5 (a[5],b[5],op[3],op[2],op[1:0],1'b0,c5,   c6,result[5]);
+   ALU1   alu6 (a[6],b[6],op[3],op[2],op[1:0],1'b0,c6,   c7,result[6]);
+   ALU1   alu7 (a[7],b[7],op[3],op[2],op[1:0],1'b0,c7,   c8,result[7]);
+   ALU1   alu8 (a[8],b[8],op[3],op[2],op[1:0],1'b0,c8,   c9,result[8]);
+   ALU1   alu9 (a[9],b[9],op[3],op[2],op[1:0],1'b0,c9,   c10,result[9]);
+   ALU1   alu10 (a[10],b[10],op[3],op[2],op[1:0],1'b0,c10,   c11,result[10]);
+   ALU1   alu11 (a[11],b[11],op[3],op[2],op[1:0],1'b0,c11,   c12,result[11]);
+   ALU1   alu12 (a[12],b[12],op[3],op[2],op[1:0],1'b0,c12,   c13,result[12]);
+   ALU1   alu13 (a[13],b[13],op[3],op[2],op[1:0],1'b0,c13,   c14,result[13]);
+   ALU1   alu14 (a[14],b[14],op[3],op[2],op[1:0],1'b0,c14,   c15,result[14]);
+   ALUmsb alu15 (a[15],b[15],op[3],op[2],op[1:0],1'b0,c15,   c16,result[15],set);
+   nor nor1(zero,result[0],result[1],result[2],result[3],result[4],result[5],result[6],result[7],result[8],result[9],result[10],result[11],result[12],result[13],result[14],result[15]);
+
+endmodule
+
+module ALU1(a,b,Ainvert,Binvert,op,less,Cin,Cout,Result);
+input a,b,Binvert,less,Ainvert;
+input [1:0] op;
+input Cin;
+output Cout,Result,Sum;
+wire b1,andout,orout,a1;
+
+not not1(a_inv, a);
+not not2(b_inv, b);
+
+//mux2x1 mx1(a,a_inv,ainvert,a1),
+//        mx2(b,b_inv,binvert,b1);
+
+xor(a1,a,Ainvert);
+// or
+
+xor(b1,b,Binvert);
+//xor (a1,a,Ainvert);
+// (b1, b,Binvert);
+
+or(orout,a1,b1);
+and(andout,a1,b1 );
+
+
+fulladder fa(Sum,Cout,a1,b1,Cin);
+mux4x1 mux2(andout,orout,Sum,less,op[1:0],Result);
+
+endmodule
+module ALUmsb(a,b,Ainvert,Binvert,op,less,Cin,Cout,Result,Sum);
+input a,b,Binvert,less,Ainvert,Cin;
+input [1:0] op;
+output Sum,Result,Cout;
+wire b1,andout,s1,notb,nota,a1,t1;
+
+not not1(a_inv, a);
+not not2(b_inv, b);
+
+//mux2x1 mx1(a,a_inv,ainvert,a1),
+//        mx2(b,b_inv,binvert,b1);
+xor(a1,a,Ainvert);
+
+xor(b1,b,Binvert);
+
+or(orout,a1,b1);
+and(andout,a1,b1 );
+
+
+fulladder fa(Sum,Cout,a1,b1,Cin);
+mux4x1 mux2(andout,orout,Sum,less,op[1:0],Result);
+
+
+endmodule
+//    
+
+module mux2x1(A,B,select,OUT);
+	input A,B,select;
+	output OUT;
+	wire x,y;
+	and	g1(x,A,~select),
+		g2(y,B,select);
+	or	g3(OUT,x,y);
+endmodule
+
+
+module halfadder(S,C,x,y);
+//S = sum
+//C = carry
+
+input x,y;
+output S,C;
+
+xor x1 (S,x,y);
+and a1 (C,x,y);
+
+endmodule
+
+module fulladder (S,C,x,y,z);
+input x,y,z;
+output S,C;
+wire S1,C1,C2;
+
+halfadder HA1 (S1,C1,x,y),
+          HA2 (S,C2,S1,z);
+    or C3(C,C2,C1);    
+endmodule 
+
+module mux4x1(i0,i1,i2,i3,select,O); 
+	input i0,i1,i2,i3;
+	input [1:0] select;
+	output O;
+	wire w,x,y,z;
+	and g1(w,i0,select[1],select[0]),
+		g2(x,i1,select[1],select[0]),
+		g3(y,i2,select[1],select[0]),
+		g4(z,i3,select[1],select[0]);
+	or	g5(O,w,x,y,z);
+endmodule
+
+module testALU;
+   reg signed [15:0] a;
+   reg signed [15:0] b;
+   reg [3:0] op;
+   wire signed [15:0] result;
+   wire zero;
+   ALU alu (op,a,b,result,zero);
+   initial begin
+   // $display("op   a                        b                         result                  zero");
+    $monitor ("op = %b a = %b %d b = %b %d result = %b %d zero = %b",op,a,a,b,b,result,result,zero);
+          op = 3'b000; a = 4'b0111; b = 4'b0001;  // AND
+	#10 op = 3'b001; a = 4'b0101; b = 4'b0010;  // OR
+	#10 op = 3'b010; a = 4'b0101; b = 4'b0001;  // ADD
+	#10 op = 3'b010; a = 4'b0111; b = 4'b0001;  // ADD
+	#10 op = 3'b110; a = 4'b0101; b = 4'b0001;  // SUB
+	#10 op = 3'b110; a = 4'b1111; b = 4'b0001;  // SUB
+	#10 op = 3'b111; a = 4'b0101; b = 4'b0001;  // SLT
+	#10 op = 3'b111; a = 4'b1110; b = 4'b1111;  // SLT
+   end
+endmodule
+/* Output
+op = 000 a = 0111 b = 0001 result = 0001 zero = 0
+op = 001 a = 0101 b = 0010 result = 0111 zero = 0
+op = 010 a = 0101 b = 0001 result = 0110 zero = 0
+op = 010 a = 0111 b = 0001 result = 1000 zero = 0
+op = 110 a = 0101 b = 0001 result = 0100 zero = 0
+op = 110 a = 1111 b = 0001 result = 1110 zero = 0
+op = 111 a = 0101 b = 0001 result = 0000 zero = 1
+op = 111 a = 1110 b = 1111 result = 0001 zero = 0
+*/

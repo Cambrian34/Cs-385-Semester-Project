@@ -309,17 +309,6 @@ module D_16_Flip_flop(D,CLK,Q);
 endmodule
 
 
-
-module MainControl (Op,Control); 
-  input [3:0] Op;
-  output reg [4:0] Control;
-// Control bits: RegDst,ALUSrc,RegWrite,ALUOp
-  always @(Op) case (Op)
-    6'b0000: Control <= 5'b10110; // Rtype
-    6'b0010: Control <= 5'b01100; // ADDI
-  endcase
-endmodule
-
 module mainctrl(Op,Control);
 input [3:0] Op;
 output reg [5:0] Control;
@@ -337,23 +326,6 @@ output reg [5:0] Control;
 
 endmodule
 
-module ALUControl (ALUOp,FuncCode,ALUCtl); 
-  input [1:0] ALUOp;
-  input [5:0] FuncCode;
-  output reg [3:0] ALUCtl;
-  always @(ALUOp,FuncCode) case (ALUOp)
-   2'b00: ALUCtl <= 4'b0000; // add
-    2'b01: ALUCtl <= 4'b0001; // subtract
-    2'b10: case (FuncCode)
-	     32: ALUCtl <= 4'b0000; // add
-	     34: ALUCtl <= 4'b0001; // sub
-	     36: ALUCtl <= 4'b0010; // and
-	     37: ALUCtl <= 4'b0011; // or
-	     39: ALUCtl <= 4'b0100; // nor
-	     42: ALUCtl <= 4'b0110; // slt 
-    endcase
-  endcase
-endmodule
 
 module CPU (clock,PC,ALUOut,IR);
   input clock;

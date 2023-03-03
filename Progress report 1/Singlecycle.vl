@@ -71,68 +71,73 @@ module mux_2(result,a,b,c);
 	or  g3(result,w1,w2);
 endmodule
 
-//Alistair Chambers
-
 module ALU(op,a,b,result,zero);
 
 	input [15:0] a,b;
-	input [2:0] op;
+	input [3:0] op;
 	output [15:0] result;
 	output zero;
 	wire c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15;
 	
-	ALU1	alu0  (a[0], b[0], op[2],op[1:0],16'b0,op[2],c1, result[0]),
-			alu1  (a[1], b[1], op[2],op[1:0],16'b0,  c1,   c2, result[1]),
-			alu2  (a[2], b[2], op[2],op[1:0],16'b0,  c2,   c3, result[2]),
-			alu3  (a[3], b[3], op[2],op[1:0],16'b0,  c3,   c4, result[3]),
-			alu4  (a[4], b[4], op[2],op[1:0],16'b0,  c4,   c5, result[4]),
-			alu5  (a[5], b[5], op[2],op[1:0],16'b0,  c5,   c6, result[5]),
-			alu6  (a[6], b[6], op[2],op[1:0],16'b0,  c6,   c7, result[6]),
-			alu7  (a[7], b[7], op[2],op[1:0],16'b0,  c7,   c8, result[7]),
-			alu8  (a[8], b[8], op[2],op[1:0],16'b0,  c8,   c9, result[8]),
-			alu9  (a[9], b[9], op[2],op[1:0],16'b0,  c9,   c10,result[9]),
-			alu10 (a[10],b[10],op[2],op[1:0],16'b0,  c10,  c11,result[10]),
-			alu11 (a[11],b[11],op[2],op[1:0],16'b0,  c11,  c12,result[11]),
-			alu12 (a[12],b[12],op[2],op[1:0],16'b0,  c12,  c13,result[12]),
-			alu13 (a[13],b[13],op[2],op[1:0],16'b0,  c13,  c14,result[13]),
-			alu14 (a[14],b[14],op[2],op[1:0],16'b0,  c14,  c15,result[14]); 
-	ALUmsb	alu15 (a[15],b[15],op[2],op[1:0],1'b0,  c15,  c16,result[15],set);
+	ALU1   alu0 (a[0],b[0],op[3],op[2],op[1:0],c16, op[2],c1,result[0]),
+          alu1 (a[1],b[1],op[3],op[2],op[1:0],1'b0,c1,   c2,result[1]),
+      alu2 (a[2],b[2],op[3],op[2],op[1:0],1'b0,c2,   c3,result[2]),
+           alu3 (a[3],b[3],op[3],op[2],op[1:0],1'b0,c3,   c4,result[3]),
+      alu4 (a[4],b[4],op[3],op[2],op[1:0],1'b0,c4,   c5,result[4]),
+      alu5 (a[5],b[5],op[3],op[2],op[1:0],1'b0,c5,   c6,result[5]),
+      alu6 (a[6],b[6],op[3],op[2],op[1:0],1'b0,c6,   c7,result[6]),
+      alu7 (a[7],b[7],op[3],op[2],op[1:0],1'b0,c7,   c8,result[7]),
+      alu8 (a[8],b[8],op[3],op[2],op[1:0],1'b0,c8,   c9,result[8]),
+      alu9 (a[9],b[9],op[3],op[2],op[1:0],1'b0,c9,   c10,result[9]),
+      alu10 (a[10],b[10],op[3],op[2],op[1:0],1'b0,c10,   c11,result[10]),
+      alu11 (a[11],b[11],op[3],op[2],op[1:0],1'b0,c11,   c12,result[11]),
+      alu12 (a[12],b[12],op[3],op[2],op[1:0],1'b0,c12,   c13,result[12]),
+      alu13 (a[13],b[13],op[3],op[2],op[1:0],1'b0,c13,   c14,result[13]),
+      alu14 (a[14],b[14],op[3],op[2],op[1:0],1'b0,c14,   c15,result[14]);
+   ALUmsb alu15 (a[15],b[15],op[3],op[2],op[1:0],1'b0,c15,   c16,result[15]);
 
 	or or1(or01, result[0],result[1]);
 	or or2(or23, result[2],result[3]);
 	nor nor1(zero,or01,or23);
 endmodule
 
-module ALU1 (a,b,binvert,op,less,carryin,carryout,result);
-   input a,b,carryin,binvert;
-   input [1:0] op;
-   input [15:0] less;
-   output carryout,result;
-   wire sum, a_and_b, a_or_b, b_inv;
-	
-   not not1(b_inv, b);
-   mux2x1 mux1(b,b_inv,binvert,b1);
-   and and1(a_and_b, a, b);
-   or or1(a_or_b, a, b);
 
-   fulladder adder1(sum,carryout,a,b1,carryin);
-   mux4x1 mux2(a_and_b,a_or_b,sum,less[0],op[1:0],result); 
+
+module ALU1 (a,b,Ainvert,binvert,op,less,carryin,carryout,result);
+   input a,b,carryin,binvert,Ainvert;
+   input [1:0] op;
+   input  less;
+   output carryout,result;
+   wire sum, a_and_b, a_or_b, b_inv,a_inv;
+   
+   not not1(a_inv, a);
+   not not2(b_inv, b);
+   
+   mux2x1 x1(a,a_inv,Ainvert,a1),
+            mux1(b,b_inv,binvert,b1);
+   and and1(a_and_b, a1, b1);
+   or or1(a_or_b, a1, b1);
+
+   fulladder adder1(sum,carryout,a1,b1,carryin);
+   mux4x1 mux2(a_and_b,a_or_b,sum,less,op[1:0],result); 
 
 endmodule
 
 
-module ALUmsb (a,b,binvert,op,less,carryin,carryout,result,sum);
-   input a,b,less,carryin,binvert;
+module ALUmsb (a,b,ainvert,binvert,op,less,carryin,carryout,result);
+   input a,b,carryin,binvert,ainvert;
    input [1:0] op;
-   output carryout,result,sum;
-   wire sum, a_and_b, a_or_b, b_inv;
-	
-   not not1(b_inv, b);
-   mux2x1 mux1(b,b_inv,binvert,b1);
-   and and1(a_and_b, a, b);
-   or or1(a_or_b, a, b);
-
-   fulladder adder1(sum,carryout,a,b1,carryin);
+   input less;
+   output carryout,result;
+   wire sum, a_and_b, a_or_b, b_inv,a_inv;
+   
+   not not1(a_inv, a);
+   not not2(b_inv, b);
+   mux2x1 x1(a,a_inv,ainvert,a1),
+            mux1(b,b_inv,binvert,b1);
+   and and1(a_and_b, a1, b1);
+   or or1(a_or_b, a1, b1);
+   fulladder adder1(sum,carryout,a1,b1,carryin);
    mux4x1 mux2(a_and_b,a_or_b,sum,less,op[1:0],result); 
 
 endmodule
@@ -308,23 +313,28 @@ module D_16_Flip_flop(D,CLK,Q);
 				f15(D[15], CLK, Q[15]);	
 endmodule
 
-
 module mainctrl(Op,Control);
 input [3:0] Op;
-output reg [5:0] Control;
+output reg [6:0] Control;
 	
 	always @(Op) case (Op)
-		4'b0000: Control <= 6'b101010;  //add
-		4'b0001: Control <= 6'b101110;  //sub
-		4'b0010: Control <= 6'b101000;  //and
-		4'b0011: Control <= 6'b101001;  //or
-		4'b0110: Control <= 6'b101111;  //slt
-		4'b0111: Control <= 6'b011010;  //addi
-		4'b0100: Control <= 6'b101011;  //nor
+		4'b0000: Control <= 7'b101_0010;  //add
+		4'b0001: Control <= 7'b101_0110;  //sub
+		4'b0010: Control <= 7'b101_0000;  //and
+		4'b0011: Control <= 7'b101_0001;  //or
+		4'b0100: Control <= 7'b101_1100;  //nor
+		4'b0101: Control <= 7'b011_1010;  //nand
+		4'b0110: Control <= 7'b101_0111;  //slt
+		4'b0111: Control <= 7'b011_0010;  //addi
+		//4'b1000: Control <= 6'b10_1001;  //lw
+		//4'b1001: Control <= 6'b10_1100;  //sw
+		//4'b1010: Control <= 6'b10_1111;  //beq
+		//4'b1011: Control <= 6'b01_1010;  //bne
 	endcase
 
 
 endmodule
+
 
 
 module CPU (clock,PC,ALUOut,IR);
@@ -333,7 +343,7 @@ module CPU (clock,PC,ALUOut,IR);
   reg[15:0] PC;
   reg[15:0] IMemory[0:1023];
   wire [15:0] IR,NextPC,A,B,ALUOut,RD2,SignExtend;
-  wire [2:0] ALUctl;
+  wire [3:0] ALUctl;
   //wire [2:0] ALUOp;
   wire [1:0] WR; 
 // Test Program
@@ -347,8 +357,8 @@ module CPU (clock,PC,ALUOut,IR);
         IMemory[4] = 16'b0011_10_11_10_000000;  // or   $t2, $t2, $t3  ($t2=15)  0011 10 11 10 xxxxxx    
         IMemory[5] = 16'b0000_10_11_11_000000;  // add  $t3, $t2, $t3  ($t3=22)  0000 10 11 11 xxxxxx   
         IMemory[6] = 16'b0100_10_11_01_000000;  // nor  $t1, $t2, $t3  ($t1=-32) 0100 10 11 01 xxxxxx
-        IMemory[7] = 16'b0110_11_10_01_000000;  // slt  $t1, $t3, $t2  ($t1= 0)  0110 11 10 01 xxxxxx    
-        IMemory[8] = 16'b0110_10_11_01_000000;  // slt  $t1, $t2, $t3  ($t1= 1)  0110 10 11 01 xxxxxx    
+        IMemory[7] = 16'b0110_10_11_01_000000;  // slt  $t1, $t3, $t2  ($t1= 0)  0110 11 10 01 xxxxxx    
+        IMemory[8] = 16'b0110_11_10_01_000000;  // slt  $t1, $t2, $t3  ($t1= 1)  0110 10 11 01 xxxxxx    
     end
   initial PC = 0;
   assign IR = IMemory[PC>>2];
@@ -362,12 +372,13 @@ module CPU (clock,PC,ALUOut,IR);
   
   assign SignExtend = {{8{IR[7]}},IR[7:0]}; // sign extension unit
   reg_file rf (IR[11:10], IR[9:8], WR, ALUOut, RegWrite, A, RD2, clock);
-  ALU fetch (3'b010, PC, 16'b100, NextPC, Unused);
-  ALU ex (ALUctl, A, B, ALUOut, Zero);
+  ALU fetch (4'b0010, PC, 16'b100, NextPC, Unused);
+   ALU ex (ALUctl, A, B, ALUOut, Zero);
 
   //MainControl MainCtr (IR[15:12],{RegDst,ALUSrc,RegWrite,ALUOp}); 
   //ALUControl ALUCtrl(ALUOp, IR[5:0], ALUctl); // ALU control unit
-	mainctrl aainCtr (IR[15:12],{RegDst,ALUSrc,RegWrite,ALUctl});
+	mainctrl ainCtr (IR[15:12],{RegDst,ALUSrc,RegWrite,ALUctl});
+	//                             1     0      1      1110
 
   always @(negedge clock) begin 
     PC <= NextPC;
@@ -411,7 +422,7 @@ Clock PC   IR                                 WD
 */
 
 /*
-Current output- Error lies in Slt command
+Current output- No Errors lies in commands
 
 Clock PC   IR                                 WD
 1      0   0111000100001111   15 (0000000000001111)
@@ -425,12 +436,12 @@ Clock PC   IR                                 WD
 1     16   0011101110000000   15 (0000000000001111)
 0     20   0000101111000000   22 (0000000000010110)
 1     20   0000101111000000   22 (0000000000010110)
-0     24   0100101101000000    0 (0000000000000000)
-1     24   0100101101000000    0 (0000000000000000)
-0     28   0110111001000000    0 (0000000000000000)
-1     28   0110111001000000    0 (0000000000000000)
-0     32   0110101101000000    0 (0000000000000000)
-1     32   0110101101000000    0 (0000000000000000)
-
+0     24   0100101101000000  -32 (1111111111100000)
+1     24   0100101101000000  -32 (1111111111100000)
+0     28   0110101101000000    0 (0000000000000000)
+1     28   0110101101000000    0 (0000000000000000)
+0     32   0110111001000000    1 (0000000000000001)
+1     32   0110111001000000    1 (0000000000000001)
 
 */
+

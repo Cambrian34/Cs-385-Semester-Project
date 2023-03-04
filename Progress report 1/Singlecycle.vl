@@ -1,25 +1,22 @@
+//half adder
 module halfadder(S,C,x,y);
-//S = sum
-//C = carry
-
 input x,y;
 output S,C;
-
 xor x1 (S,x,y);
 and a1 (C,x,y);
-
 endmodule
 
-module fulladder (S,C,x,y,z);
+//full adder
+module fulladder(S,C,x,y,z);
 input x,y,z;
 output S,C;
 wire S1,C1,C2;
-
 halfadder HA1 (S1,C1,x,y),
           HA2 (S,C2,S1,z);
     or C3(C,C2,C1);    
 endmodule 
 
+// 4x1 multiplexer 
 module mux4x1(i0,i1,i2,i3,select,y);
 
 	input i0,i1,i2,i3;
@@ -39,7 +36,7 @@ module mux4x1(i0,i1,i2,i3,select,y);
 	
 endmodule
 
-
+//2x1 multplexer
 module mux2x1(A,B,select,OUT); 
   input A,B,select; 
   output OUT;
@@ -93,8 +90,7 @@ nor nor1(zero,or01,or23);
 
 endmodule
 
-
-
+// 1bit Alu
 module ALU1 (a,b,Ainvert,binvert,op,less,carryin,carryout,result);
    input a,b,carryin,binvert,Ainvert;
    input [1:0] op;
@@ -115,7 +111,7 @@ module ALU1 (a,b,Ainvert,binvert,op,less,carryin,carryout,result);
 
 endmodule
 
-
+//1 bit alu significant bit
 module ALUmsb (a,b,ainvert,binvert,op,less,carryin,carryout,result);
    input a,b,carryin,binvert,ainvert;
    input [1:0] op;
@@ -134,14 +130,14 @@ module ALUmsb (a,b,ainvert,binvert,op,less,carryin,carryout,result);
 
 endmodule
 
-//.             RR1,RR2,WR,WD,RegWrite,RD1,RD2,clock
+// register file
 module reg_file(rr1,rr2,wr,wd,regwrite,rd1,rd2,clock);
 	input [1:0] rr1,rr2,wr;
 	input [15:0] wd;
 	input regwrite,clock;
 	output [15:0] rd1,rd2;
 	wire [15:0] q1,q2,q3;	
-	
+
 	register reg1(wd,c1,q1);
 	register reg2(wd,c2,q2);
 	register reg3(wd,c3,q3);
@@ -157,6 +153,8 @@ module reg_file(rr1,rr2,wr,wd,regwrite,rd1,rd2,clock);
 		and3 (c3,regwrite_and_clock,w3);
 endmodule
 
+
+// 16 bit register
 module register(WriteData,CLK, ReadData);
    input [15:0] WriteData;
    input CLK;
@@ -179,7 +177,7 @@ module register(WriteData,CLK, ReadData);
     	r15(WriteData[15], CLK, ReadData[15]);
 endmodule
 
-
+//2 bit 2x1 mulitplexer
 module mux2bit2x1(A,B,select,OUT);
 	input [1:0] A,B;
     input select;
@@ -189,6 +187,7 @@ module mux2bit2x1(A,B,select,OUT);
            m2(A[1], B[1], select, OUT[1]);
 endmodule
 
+// 16 bit 2x1 multiplexer
 module mux16bit2x1(A, B, select, OUT);
 	input [15:0] A,B;
     input select;
@@ -213,7 +212,7 @@ module mux16bit2x1(A, B, select, OUT);
 endmodule
 
 
-
+// 16 bit 4x1 muliplexer
 module mux4x1_16bit(i0,i1,i2,i3,select,y);
 	input [15:0] i0,i1,i2,i3;
 	input [1:0] select;
@@ -237,10 +236,10 @@ module mux4x1_16bit(i0,i1,i2,i3,select,y);
 		   mux13(1'b0,i1[12],i2[12],i3[12],select[1:0],y[12]),
 		   mux14(1'b0,i1[13],i2[13],i3[13],select[1:0],y[13]),
 		   mux15(1'b0,i1[14],i2[14],i3[14],select[1:0],y[14]),
-		   mux16(1'b0,i1[15],i2[15],i3[15],select[1:0],y[15]);
-		   
+		   mux16(1'b0,i1[15],i2[15],i3[15],select[1:0],y[15]);		   
 endmodule
 
+// decoder
 module decoder (S1,S0,D3,D2,D1,D0); 
    input S0,S1; 
    output D0,D1,D2,D3; 
@@ -254,6 +253,7 @@ module decoder (S1,S0,D3,D2,D1,D0);
        a3 (D3,   S1,   S0); 
 endmodule 
 
+// D-flip flop
 module D_flip_flop(D,CLK,Q);
 
 	input D,CLK;
@@ -266,8 +266,8 @@ module D_flip_flop(D,CLK,Q);
 			
 endmodule
 
+// D-latch
 module D_latch(D,C,Q);
-	
 	input D,C;
 	output Q;
 	wire x,y,D1,Q1;
@@ -277,10 +277,10 @@ module D_latch(D,C,Q);
 		 nand3(Q,x,Q1),
 		 nand4(Q1,y,Q);
 		 
-	not not1(D1,D);
-	
+	not not1(D1,D);	
 endmodule
 
+// 16 bit D Flip Flop
 module D_16_Flip_flop(D,CLK,Q);
 	input [15:0] D;
 	input CLK;
@@ -304,10 +304,10 @@ module D_16_Flip_flop(D,CLK,Q);
 				f15(D[15], CLK, Q[15]);	
 endmodule
 
+// Alu/Main Control
 module mainctrl(Op,Control);
-input [3:0] Op;
-output reg [6:0] Control;
-	
+    input [3:0] Op;
+    output reg [6:0] Control;
 	always @(Op) case (Op)
 		4'b0000: Control <= 7'b101_0010;  //add
 		4'b0001: Control <= 7'b101_0110;  //sub
@@ -322,12 +322,9 @@ output reg [6:0] Control;
 		//4'b1010: Control <= 6'b10_1111;  //beq
 		//4'b1011: Control <= 6'b01_1010;  //bne
 	endcase
-
-
 endmodule
 
-
-
+// 16 bit CPU
 module CPU (clock,PC,ALUOut,IR);
   input clock;
   output [15:0] ALUOut,IR,PC;
@@ -376,7 +373,7 @@ module CPU (clock,PC,ALUOut,IR);
   end
 endmodule
 
-
+//Test Module
 module test ();
   reg clock;
   wire signed [15:0] WD,IR,PC;
@@ -391,7 +388,7 @@ module test ();
   end
 endmodule
 
-/* Output
+/* 32bit  Output
 Clock PC   IR                                 WD
 1      0   00100000000010010000000000001111   15 (00000000000000000000000000001111)
 0      4   00100000000010100000000000000111    7 (00000000000000000000000000000111)
@@ -413,7 +410,7 @@ Clock PC   IR                                 WD
 */
 
 /*
-Current output- No Errors lies in commands
+Current output- 16 bits
 
 Clock PC   IR                                 WD
 1      0   0111000100001111   15 (0000000000001111)

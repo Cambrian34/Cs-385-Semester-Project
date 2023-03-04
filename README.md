@@ -1,4 +1,4 @@
 # Cs-385-Semmester-Project
 
 
-#16 Bit Mips Proccessor(Under Developement)
+#16 Bit Mips Processor(Under Developement)

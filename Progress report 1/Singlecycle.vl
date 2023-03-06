@@ -66,7 +66,7 @@ module ALU(op,a,b,result,zero);
 	output zero;
 	wire c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15;
 	
-ALU1    alu0 (a[0],b[0],op[3],op[2],op[1:0],c16, op[2],c1,result[0]),
+ALU1    alu0 (a[0],b[0],op[3],op[2],op[1:0],set, op[2],c1,result[0]),
         alu1 (a[1],b[1],op[3],op[2],op[1:0],1'b0,c1,   c2,result[1]),
       	alu2 (a[2],b[2],op[3],op[2],op[1:0],1'b0,c2,   c3,result[2]),
         alu3 (a[3],b[3],op[3],op[2],op[1:0],1'b0,c3,   c4,result[3]),
@@ -82,7 +82,7 @@ ALU1    alu0 (a[0],b[0],op[3],op[2],op[1:0],c16, op[2],c1,result[0]),
       	alu13 (a[13],b[13],op[3],op[2],op[1:0],1'b0,c13,   c14,result[13]),
       	alu14 (a[14],b[14],op[3],op[2],op[1:0],1'b0,c14,   c15,result[14]);
 
-ALUmsb alu15 (a[15],b[15],op[3],op[2],op[1:0],1'b0,c15,   c16,result[15]);
+ALUmsb  alu15 (a[15],b[15],op[3],op[2],op[1:0],1'b0,c15,   c16,result[15],set);
 
 or or1(or01, result[0],result[1]);
 or or2(or23, result[2],result[3]);
@@ -112,11 +112,11 @@ module ALU1 (a,b,Ainvert,binvert,op,less,carryin,carryout,result);
 endmodule
 
 //1 bit alu significant bit
-module ALUmsb (a,b,ainvert,binvert,op,less,carryin,carryout,result);
+module ALUmsb (a,b,ainvert,binvert,op,less,carryin,carryout,result,sum);
    input a,b,carryin,binvert,ainvert;
    input [1:0] op;
    input less;
-   output carryout,result;
+   output carryout,result,sum;
    wire sum, a_and_b, a_or_b, b_inv,a_inv;
    
    not not1(a_inv, a);
@@ -345,8 +345,8 @@ module CPU (clock,PC,ALUOut,IR);
         IMemory[4] = 16'b0011_10_11_10_000000;  // or   $t2, $t2, $t3  ($t2=15)  0011 10 11 10 xxxxxx    
         IMemory[5] = 16'b0000_10_11_11_000000;  // add  $t3, $t2, $t3  ($t3=22)  0000 10 11 11 xxxxxx   
         IMemory[6] = 16'b0100_10_11_01_000000;  // nor  $t1, $t2, $t3  ($t1=-32) 0100 10 11 01 xxxxxx
-        IMemory[7] = 16'b0110_10_11_01_000000;  // slt  $t1, $t3, $t2  ($t1= 0)  0110 11 10 01 xxxxxx    
-        IMemory[8] = 16'b0110_11_10_01_000000;  // slt  $t1, $t2, $t3  ($t1= 1)  0110 10 11 01 xxxxxx    
+        IMemory[7] = 16'b0110_11_10_01_000000;  // slt  $t1, $t3, $t2  ($t1= 0)  0110 11 10 01 xxxxxx    
+        IMemory[8] = 16'b0110_10_11_01_000000;  // slt  $t1, $t2, $t3  ($t1= 1)  0110 10 11 01 xxxxxx    
     end
   initial PC = 0;
   assign IR = IMemory[PC>>2];

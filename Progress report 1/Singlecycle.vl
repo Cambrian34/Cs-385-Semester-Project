@@ -309,6 +309,7 @@ module mainctrl(Op,Control);
     input [3:0] Op;
     output reg [6:0] Control;
 	always @(Op) case (Op)
+	//extend 9 nine bits to accomadate the 9 bits of the control signal
 		4'b0000: Control <= 7'b101_0010;  //add
 		4'b0001: Control <= 7'b101_0110;  //sub
 		4'b0010: Control <= 7'b101_0000;  //and

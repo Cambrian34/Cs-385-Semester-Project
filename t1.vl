@@ -1,0 +1,128 @@
+// Behavioral model of MIPS - single cycle implementation
+module reg_file (RR1,RR2,WR,WD,RegWrite,RD1,RD2,clock);
+  input [4:0] RR1,RR2,WR;
+  input [15:0] WD;
+  input RegWrite,clock;
+  output [15:0] RD1,RD2;
+  reg [15:0] Regs[0:3];
+  assign RD1 = Regs[RR1];
+  assign RD2 = Regs[RR2];
+  initial Regs[0] = 0;
+  always @(negedge clock)
+    if (RegWrite==1 & WR!=0)
+        Regs[WR] <= WD;
+endmodule
+
+module alu (ALUctl,A,B,ALUOut,Zero);
+  input [3:0] ALUctl;
+  input [31:0] A,B;
+  output reg [31:0] ALUOut;
+  output Zero, Overflow;
+  always @(ALUctl, A, B) // reevaluate if these change
+    case (ALUctl)
+      4'b0000: ALUOut <= A & B; //AND
+      4'b0001: ALUOut <= A | B; //OR
+      4'b0010: ALUOut <= A + B; //ADD
+      4'b0110: ALUOut <= A - B; //SUB
+      4'b0111: ALUOut <= A < B ? 1:0; //
+      4'b1100: ALUOut <= ~A & ~B; //NAND
+      4'b1101: ALUOut <= ~A | ~B; //NOR
+    endcase
+  assign Zero = (ALUOut==0); // Zero is true if ALUOut is 0
+endmodule
+
+module MainControl (Op,Control);
+  input [3:0] Op;
+  output reg [10:0] Control;
+// RegDst,ALUSrc,MemtoReg,RegWrite,MemWrite,Beq,Bne,ALUCtl
+  always @(Op) case (Op)
+    4'b0110: Control <= 11'b10010_00_0010; // SLT
+   
+   
+   
+    4'b1000: Control <= 11'b01110_00_0010; // LW
+    
+    4'b1001: Control <= 11'b1001_00_0010; // SW  
+    
+    4'b1010: Control <= 11'b00000_10_0110; // BEQ  
+    4'b0111: Control <= 11'b01010_00_0010; // ADDI
+  endcase
+endmodule
+
+module CPU (clock,WD,IR,PC);
+
+  input clock;
+  output [15:0] WD,IR,PC;
+  reg[15:0] PC, IMemory[0:1023], DMemory[0:1023];
+  wire [15:0] IR,SignExtend,NextPC,RD2,A,B,ALUOut,PCplus4,Target;
+  wire [1:0] WR;
+  wire [3:0] ALUctl;
+
+  initial begin
+ // Program: swap memory cells and compute absolute value
+ // The output will be from this
+    IMemory[0] = 16'b1000_00_01_00000000;  // lw $1, 0($0)
+    IMemory[1] = 16'b1000_00_10_00000010;  // lw $2, 2($0)
+    IMemory[2] = 16'b0110_01_10_11_000000;  // slt $3, $1, $2
+    /*
+    IMemory[3] = 32'h11600002;  // beq $t3, $0, IMemory[6]
+    IMemory[4] = 32'hac090004;  // sw $t1, 4($0)
+    IMemory[5] = 32'hac0a0000;  // sw $t2, 0($0)
+    IMemory[6] = 32'h8c090000;  // lw $t1, 0($0)
+    IMemory[7] = 32'h8c0a0004;  // lw $t2, 4($0)
+    IMemory[8] = 32'h014a5027;  // nor $t2, $t2, $t2 (sub $3, $1, $2 in two's complement)
+    IMemory[9] = 32'h214a0001;  // addi $t2, $t2, 1
+    IMemory[10] = 32'h012a5820;  // add $t3, $t1, $t2
+ // Data
+ 
+
+ */
+    DMemory [0] = 16'd7; // swap the cells and see how the simulation output changes
+    DMemory [1] = 16'd5;
+  end
+  initial PC = 0;
+  assign IR = IMemory[PC>>1];
+  assign SignExtend = {{8{IR[7]}},IR[7:0]}; // sign extension
+  reg_file rf (IR[11:10],IR[9:8],WR,WD,RegWrite,A,RD2,clock);
+  alu fetch (4'b0010,PC,2,PCplus4,Unused1);
+  alu ex (ALUctl, A, B, ALUOut, Zero);
+  alu branch (4'b0010,SignExtend<<1,PCplus4,Target,Unused2);
+  MainControl MainCtr (IR[15:12],{RegDst,ALUSrc,MemtoReg,RegWrite,MemWrite,Beq,Bne,ALUctl});
+  assign WR = (RegDst) ? IR[7:6]: IR[9:8]; // RegDst Mux
+  assign WD = (MemtoReg) ? DMemory[ALUOut>>1]: ALUOut; // MemtoReg Mux
+  assign B  = (ALUSrc) ? SignExtend: RD2; // ALUSrc Mux
+  assign NextPC = (Beq && Zero || Bne && ~Zero) ? Target: PCplus4; // Branch Mux
+  always @(negedge clock) begin
+    PC <= NextPC;
+    if (MemWrite) DMemory[ALUOut>>1] <= RD2;
+  end
+endmodule
+
+// Test module
+module test ();
+  reg clock;
+  wire signed [15:0] WD,IR,PC;
+  CPU test_cpu(clock,WD,IR,PC);
+  always #1 clock = ~clock;
+  initial begin
+    $display ("PC  IR                                WD");
+    $monitor ("%2d  %b %2d (%b)",PC,IR,WD,WD);
+    clock = 1;
+    #20 $finish;
+  end
+endmodule
+
+/* Output
+PC  IR                                WD
+ 0  10001100000010010000000000000000  5 (00000000000000000000000000000101)
+ 4  10001100000010100000000000000100  7 (00000000000000000000000000000111)
+ 8  00000001001010100101100000101010  1 (00000000000000000000000000000001)
+12  00010001011000000000000000000010  1 (00000000000000000000000000000001)
+16  10101100000010010000000000000100  4 (00000000000000000000000000000100)
+20  10101100000010100000000000000000  0 (00000000000000000000000000000000)
+24  10001100000010010000000000000000  7 (00000000000000000000000000000111)
+28  10001100000010100000000000000100  5 (00000000000000000000000000000101)
+32  00000001010010100101000000100111 -6 (11111111111111111111111111111010)
+36  00100001010010100000000000000001 -5 (11111111111111111111111111111011)
+40  00000001001010100101100000100000  2 (00000000000000000000000000000010)
+*/

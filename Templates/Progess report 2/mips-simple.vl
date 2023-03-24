@@ -36,11 +36,11 @@ module MainControl (Op,Control);
   output reg [7:0] Control;
 // RegDst,ALUSrc,MemtoReg,RegWrite,MemWrite,Branch,ALUOp
   always @(Op) case (Op)
-    6'b000000: Control <= 8'b10010010; // Rtype
-    6'b100011: Control <= 8'b01110000; // LW    
-    6'b101011: Control <= 8'b01001000; // SW    
-    6'b000100: Control <= 8'b00000101; // BEQ   
-    6'b001000: Control <= 8'b01010100; // ADDI
+    6'b000000: Control <= 8'b1_0_0_1_0_0_10; // Rtype
+    6'b100011: Control <= 8'b011100_00; // LW    
+    6'b101011: Control <= 8'b010010_00; // SW    
+    6'b000100: Control <= 8'b000001_01; // BEQ   
+    6'b001000: Control <= 8'b010101_00; // ADDI
   endcase
 endmodule
 

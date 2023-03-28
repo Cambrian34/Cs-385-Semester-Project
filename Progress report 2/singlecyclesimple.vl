@@ -380,7 +380,7 @@ module CPU (clock,PC,WD,IR);
     IMemory[7] = 32'h8c0a0004;  // lw $t2, 4($0) 
     IMemory[8] = 32'h014a5027;  // nor $t2, $t2, $t2 (sub $3, $1, $2 in two's complement)
     IMemory[9] = 32'h214a0001;  // addi $t2, $t2, 1 
-    IMemory[10] = 32'h012a5820;  // add $t3, $t1, $t2 
+    IMemory[10] = 16'b0000_10_11_11_000000;  // add $t3, $t1, $t2 
  // Data
     DMemory [0] = 32'h2; // swap the cells and see how the simulation output changes
     DMemory [1] = 32'h4;

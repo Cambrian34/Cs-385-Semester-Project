@@ -317,7 +317,7 @@ module mainctrl(Op,Control);
 //         1          1       1    1     1        1     1          4
 ////    MemtoReg, MemWrite, BNE, BEQ, RegDst, AluSrc, RegWrite, AluCtrl
 //                      10'b1_0_01000 010
-		4'b0000: Control <= 11'b0000_101_0010;  //add
+		4'b0000: Control <= 11'b0000_1_01_0010;  //add
     //  4'b0000: Control <= 7'b101_0010;//add
 		4'b0001: Control <= 11'b0000_101_0110;  //sub
     //  4'b0001: Control <= 7'b101_0110;  //sub
@@ -334,25 +334,20 @@ module mainctrl(Op,Control);
 		4'b0111: Control <= 11'b0000_011_0010;  //addi
     //  4'b0111: Control <= 7'b011_0010;  //addi
 
-		4'b1000: Control <= 11'b0000_10_1111;  //lw
+		4'b1000: Control <= 11'b10_00_0_11_0011;  //lw
     //  4'b1000: Control <= 7'b10_1111;  //lw
-		4'b1001: Control <= 11'b0000_10_1100;  //sw
+		4'b1001: Control <= 11'b01_00_0_10_1100;  //sw
     //  4'b1001: Control <= 7'b10_1100;  //sw   
         
-		4'b1010: Control <= 11'b0000_10_1111;  //beq
+		4'b1010: Control <= 11'b00_11_0_00_1111;  //beq
     //  4'b1010: Control <= 7'b10_1111;  //beq
-		4'b1011: Control <= 11'b0000_01_1010;  //bne
+		4'b1011: Control <= 11'b00_00_0_01_1010;  //bne
     //  4'b1011: Control <= 7'b01_1010;  //bne
 
     //  4'b1100: Control <= 7'b0000_00_0000;  //halt
- 
-   
-   // 4'b1000: Control <= 11'b01110_00_0010; // LW
-//  4
-    //4'b1001: Control <= 11'b1001_00_0010; // SW  
-    
-   // 4'b1010: Control <= 11'b00000_10_0110; // BEQ  
-    //4'b0111: Control <= 11'b01010_00_0010; // ADDI
+
+   // MemtoReg, MemWrite,| Branch,| RegDst,| AluSrc, RegWrite,| AluCtrl
+
 	endcase
 endmodule
 
@@ -371,7 +366,7 @@ module branchctrl(Branchop,zero,bout);
 endmodule
 
 // 16 bit CPU
-module CPU (clock,PC,ALUOut,IR);
+module CPU (clock,PC,ALUOut,IR,WD);
   input clock;
   output [15:0] ALUOut,IR,PC,WD;
   reg[15:0] PC;
@@ -394,21 +389,21 @@ module CPU (clock,PC,ALUOut,IR);
         IMemory[7] = 16'b0110_11_10_01_000000;  // slt  $t1, $t3, $t2  ($t1= 0)  0110 11 10 01 xxxxxx    
         IMemory[8] = 16'b0110_10_11_01_000000;  // slt  $t1, $t2, $t3  ($t1= 1)  0110 10 11 01 xxxxxx    
     
-    */ // Program: swap memory cells and compute absolute value
-    IMemory[0] = 32'h8c090000;  // lw $t1, 0($0) 
-    IMemory[1] = 32'h8c0a0004;  // lw $t2, 4($0)
-    IMemory[2] = 32'h012a582a;  // slt $t3, $t1, $t2
-    IMemory[3] = 32'h11600002;  // beq $t3, $0, IMemory[6] 
-    IMemory[4] = 32'hac090004;  // sw $t1, 4($0) 
-    IMemory[5] = 32'hac0a0000;  // sw $t2, 0($0) 
-    IMemory[6] = 32'h8c090000;  // lw $t1, 0($0) 
-    IMemory[7] = 32'h8c0a0004;  // lw $t2, 4($0) 
-    IMemory[8] = 32'h014a5027;  // nor $t2, $t2, $t2 (sub $3, $1, $2 in two's complement)
-    IMemory[9] = 32'h214a0001;  // addi $t2, $t2, 1 
-    IMemory[10] = 32'h012a5820;  // add $t3, $t1, $t2 
+    / */ // Program: swap memory cells and compute absolute value
+    IMemory[0] = 16'b1000_01_0000000000;//32'h8c090000;  // lw $t1, 0($0) // 16'b1000_01_0000000000
+    IMemory[1] = 16'b1000_10_0000000100;//32'h8c0a0004;  // lw $t2, 4($0) // 16'b1000_11_0000000100
+    IMemory[2] = 16'b0110_01_11_10_000000;//32'h012a582a;  // slt $t3, $t1, $t2 // 16'b0110_01_11_10_000000
+    IMemory[3] = 32'h11600002;  // beq $t3, $0, IMemory[6] // 16'b1010_
+    IMemory[4] =16'b1001_01_0000000100;//32'hac090004;  // sw $t1, 4($0)  // 16'b1001_01_0000000100
+    IMemory[5] = 16'b1001_10_0000000000; //32'hac0a0000;  // sw $t2, 0($0)  // 16'b1001_10_0000000000
+    IMemory[6] = 16'b1000_01_0000000000;//32'h8c090000;  // lw $t1, 0($0)  // 16'b1000_01_0000000000
+    IMemory[7] = 16'b1000_10_0000000100; // 32'h8c0a0004;  // lw $t2, 4($0)  // 16'b1000_10_0000000100
+    IMemory[8] = 16'b0100_10_10_10_000000;//32'h014a5027;  // nor $t2, $t2, $t2 (sub $3, $1, $2 in two's complement) // 16'b0100_10_10_10_000000
+    IMemory[9] = 16'b0111_10_10_00000001; //32'h214a0001;  // addi $t2, $t2, 1 // 16'b0111_10_10_00000001
+    IMemory[10] = 16'b0000_01_11_10_000000; //32'h012a5820;  // add $t3, $t1, $t2 // 16'b0000_01_11_10_000000
  // Data
-    DMemory [0] = 32'd5; // swap the cells and see how the simulation output changes
-    DMemory [1] = 32'd7;
+    DMemory [0] = 16'd4; // swap the cells and see how the simulation output changes
+    DMemory [1] = 16'd7;
     //*/
     end
     
@@ -440,9 +435,9 @@ module CPU (clock,PC,ALUOut,IR);
   //
 	mainctrl ainCtr (IR[15:12],{ MemtoReg, MemWrite, branchop,RegDst,ALUSrc,RegWrite,ALUctl});
 	//                             1     0      1      1110
-branchctrl branchCtr (branchop,Zero,BranchOut);
-
-//mux16bit2x1 muxBranch (PCplus2, Target, BranchOut, NextPC);
+//branchctrl branchCtr (branchop,Zero,BranchOut);
+assign NextPC = (branchop && Zero) ? Target: PCplus4; // Branch Mux
+//mux2x1 muxBranch (T,Zero, BranchOut, NextP);
 
   always @(negedge clock) begin 
     PC <= NextPC;
@@ -452,13 +447,13 @@ endmodule
 //Test Module
 module test ();
   reg clock;
-  wire signed [15:0] WD,IR,PC;
+  wire signed [15:0] WD,IR,PC,WD2;
   
-  CPU test_cpu(clock,PC,WD,IR);
+  CPU test_cpu(clock,PC,WD,IR,WD2);
   always #1 clock = ~clock;
   initial begin
     $display ("Clock PC   IR                                 WD");
-    $monitor ("%b     %2d   %b  %3d (%b)",clock,PC,IR,WD,WD);
+    $monitor ("%b     %2d   %b  %3d (%b)",clock,PC,IR,WD,WD,WD2);
     clock = 1;
     #16 $finish;
   end

@@ -40,10 +40,28 @@ module MainControl (Op,Control);
    
     4'b1000: Control <= 11'b01110_00_0010; // LW
     
-    4'b1001: Control <= 11'b1001_00_0010; // SW  
+    4'b1001: Control <= 11'b01001_00_0010; // SW  
     
     4'b1010: Control <= 11'b00000_10_0110; // BEQ  
     4'b0111: Control <= 11'b01010_00_0010; // ADDI
+  endcase
+endmodule
+
+module ALUControl (ALUOp,FuncCode,ALUCtl); 
+  input [1:0] ALUOp;
+  input [5:0] FuncCode;
+  output reg [3:0] ALUCtl;
+  always @(ALUOp,FuncCode) case (ALUOp)
+    2'b00: ALUCtl <= 4'b0010; // add
+    2'b01: ALUCtl <= 4'b0110; // subtract
+    2'b10: case (FuncCode)
+	     32: ALUCtl <= 4'b0010; // add
+	     34: ALUCtl <= 4'b0110; // sub
+	     36: ALUCtl <= 4'b0000; // and
+	     37: ALUCtl <= 4'b0001; // or
+	     39: ALUCtl <= 4'b1100; // nor
+	     42: ALUCtl <= 4'b0111; // slt
+    endcase
   endcase
 endmodule
 
@@ -56,12 +74,14 @@ module CPU (clock,WD,IR,PC);
   wire [1:0] WR;
   wire [3:0] ALUctl;
 
+
   initial begin
  // Program: swap memory cells and compute absolute value
  // The output will be from this
     IMemory[0] = 16'b1000_00_01_00000000;  // lw $1, 0($0)
     IMemory[1] = 16'b1000_00_10_00000010;  // lw $2, 2($0)
     IMemory[2] = 16'b0110_01_10_11_000000;  // slt $3, $1, $2
+<<<<<<< HEAD
     IMemory[3] = 16'b1010_11_00_00000000;  // beq $3, $0, IMemory[6]
     IMemory[4] = 16'b1001_00_01_00000010;  // sw $1, 2($0)
     IMemory[5] = 16'b1001_00_10_00000000;  // sw $2, 0($0)
@@ -71,6 +91,16 @@ module CPU (clock,WD,IR,PC);
     IMemory[8] = 16'b0100_10_10_10_000000;  // nor $2, $2, $2 (sub $3, $1, $2 in 2s complement)
     IMemory[9] = 16'b0111_01_10_11_000000;  // addi $2, $2, 1
     IMemory[10] = 16'b0000_01_10_11_000000;  // add $3, $1, $2
+=======
+    IMemory[3] = 16'b1010_01_00_00000000;  // beq $3, $0, IMemory[6]
+    IMemory[4] = 16'b1001_01_0000000010;  // sw $1, 2($0)
+    IMemory[5] = 16'b1001_10_0000000000;  // sw $2, 0($0)
+    IMemory[6] = 16'b1000_01_0000000000;  // lw $1, 0($0)
+    IMemory[7] = 16'b1000_10_0000000010;  // lw $2, 2($0)
+    IMemory[8] = 16'b0100_10_10_10_000000;  // nor $2, $2, $2 (sub $3, $1, $2 in 2s complement)
+    IMemory[9] = 16'b0111_10_10_00000001;  // addi $2, $2, 1
+    IMemory[10] = 16'b0000_01_11_10_000000;  // add $3, $1, $2
+>>>>>>> 88db87dd8e6edb41f64ae7009c6e4cc2a35b8044
 
     /*
     IMemory[3] = 32'h11600002;  // beq $t3, $0, IMemory[6]
@@ -85,20 +115,33 @@ module CPU (clock,WD,IR,PC);
  
 
  */
+<<<<<<< HEAD
     DMemory [0] = 16'd5; // swap the cells and see how the simulation output changes
     DMemory [1] = 16'd7;
+=======
+    DMemory [0] = 16'd7; // swap the cells and see how the simulation output changes
+    DMemory [1] = 16'd5; //
+    // DMemory [2] = 16'd1;
+    // DMemory [3] = 16'd1;
+
+    
+>>>>>>> 88db87dd8e6edb41f64ae7009c6e4cc2a35b8044
   end
   initial PC = 0;
   assign IR = IMemory[PC>>2];
   assign SignExtend = {{8{IR[7]}},IR[7:0]}; // sign extension
   reg_file rf (IR[11:10],IR[9:8],WR,WD,RegWrite,A,RD2,clock);
+<<<<<<< HEAD
   
+=======
+>>>>>>> 88db87dd8e6edb41f64ae7009c6e4cc2a35b8044
   alu fetch (4'b0010,PC,16'b100,PCplus4,Unused1);
   alu ex (ALUctl, A, B, ALUOut, Zero);
   alu branch (4'b0010,SignExtend<<2,PCplus4,Target,Unused2);
   MainControl MainCtr (IR[15:12],{RegDst,ALUSrc,MemtoReg,RegWrite,MemWrite,Beq,Bne,ALUctl});
+  ALUControl ALUCtrl (ALUOp,FuncCode,ALUCtl);
   assign WR = (RegDst) ? IR[7:6]: IR[9:8]; // RegDst Mux
-  assign WD = (MemtoReg) ? DMemory[ALUOut>>1]: ALUOut; // MemtoReg Mux
+  assign WD = (MemtoReg) ? DMemory[ALUOut>>2]: ALUOut; // MemtoReg Mux
   assign B  = (ALUSrc) ? SignExtend: RD2; // ALUSrc Mux
   
   assign NextPC = (Beq && Zero || Bne && ~Zero) ? Target: PCplus4; // Branch Mux

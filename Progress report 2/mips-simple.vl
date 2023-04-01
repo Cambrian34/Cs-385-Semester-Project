@@ -40,12 +40,30 @@ module MainControl (Op,Control);
    
    
    
-    4'b1000: Control <= 11'b10_00_0_11_0011; // LW
+    4'b1000: Control <= 11'b01110_00_0010; // LW
     
-    4'b1001: Control <= 11'b01_00_0_10_1100; // SW  
+    4'b1001: Control <= 11'b1001_00_0010; // SW  
     
     4'b1010: Control <= 11'b00000_10_0110; // BEQ  
     4'b0111: Control <= 11'b01010_00_0010; // ADDI
+  endcase
+endmodule
+
+module ALUControl (ALUOp,FuncCode,ALUCtl); 
+  input [1:0] ALUOp;
+  input [5:0] FuncCode;
+  output reg [3:0] ALUCtl;
+  always @(ALUOp,FuncCode) case (ALUOp)
+    2'b00: ALUCtl <= 4'b0010; // add
+    2'b01: ALUCtl <= 4'b0110; // subtract
+    2'b10: case (FuncCode)
+	     32: ALUCtl <= 4'b0010; // add
+	     34: ALUCtl <= 4'b0110; // sub
+	     36: ALUCtl <= 4'b0000; // and
+	     37: ALUCtl <= 4'b0001; // or
+	     39: ALUCtl <= 4'b1100; // nor
+	     42: ALUCtl <= 4'b0111; // slt
+    endcase
   endcase
 endmodule
 

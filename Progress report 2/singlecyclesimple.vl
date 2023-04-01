@@ -396,7 +396,7 @@ module CPU (clock,WD,IR,PC);
     /*/
 
     IMemory[0] = 16'b1000_00_01_00000000;  // lw $1, 0($0)
-    IMemory[1] = 16'b1000_00_10_00000010;  // lw $2, 2($0)
+    IMemory[1] = 16'b1000_00_10_00000100;  // lw $2, 2($0)
     IMemory[2] = 16'b0110_01_10_11_000000;  // slt $3, $1, $2
     IMemory[3] = 16'b1010_11_00_00000011;  // beq $3, $0, IMemory[6]
     
@@ -404,7 +404,7 @@ module CPU (clock,WD,IR,PC);
     IMemory[5] = 16'b1001_00_10_00000000;  // sw $2, 0($0)
 
     IMemory[6] = 16'b1000_00_01_00000000;  // lw $1, 0($0)
-    IMemory[7] = 16'b1000_00_10_00000010;  // lw $2, 2($0)
+    IMemory[7] = 16'b1000_00_10_00000100;  // lw $2, 2($0)
 
     IMemory[8] = 16'b0001_01_10_11_000000;  // nor $2, $2, $2 (sub $3, $1, $2 in 2s complement)
     
@@ -416,6 +416,7 @@ module CPU (clock,WD,IR,PC);
     // Data
     DMemory [0] = 16'd5; // swap the cells and see how the simulation output changes
     DMemory [1] = 16'd7;
+    DMemory [2] = 16'd1;
     //*/
     end
     
@@ -452,7 +453,7 @@ mux16bit2x1 muxBranch (PCplus4,Target, BranchOut, NextPC);
 
   always @(negedge clock) begin 
     PC <= NextPC;
-    if (MemWrite) DMemory[ALUOut>>1] <= RD2;
+    if (MemWrite) DMemory[ALUOut>>2] <= RD2;
 
   end
 endmodule

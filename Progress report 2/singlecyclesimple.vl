@@ -324,17 +324,10 @@ module mainctrl(Op,Control);
 		4'b1000: Control <= 11'b10_00_0_11_0010;  //lw
 
     //MemtoReg, MemWrite,| Branch,| RegDst,| AluSrc, RegWrite,| AluCtrl
-		4'b1001: Control <= 11'b01_00_0_10_1000;  //sw
-    //  4'b1001: Control <= 7'b10_1100;  //sw   
+		4'b1001: Control <= 11'b01_00_0_10_0010;  //sw
         
-		4'b1010: Control <= 11'b00_01_0_00_0001;  //beq
-    //  4'b1010: Control <= 7'b10_1111;  //beq
+		4'b1010: Control <= 11'b00_01_0_00_0110;  //beq
 		4'b1011: Control <= 11'b00_10_0_01_1010;  //bne
-    //  4'b1011: Control <= 7'b01_1010;  //bne
-
-    //  4'b1100: Control <= 7'b0000_00_0000;  //halt
-
-   // MemtoReg, MemWrite,| Branch,| RegDst,| AluSrc, RegWrite,| AluCtrl
 
 	endcase
 endmodule
@@ -366,45 +359,17 @@ module CPU (clock,WD,IR,PC);
   wire [1:0] WR, branchop; 
 // Test Program
   initial begin 
-         /* /                                         Assembly     | Result |      Binary IR      
-        //                                  ----------------------------------------------------
-        IMemory[0] = 16'b0111_00_01_00001111;   // addi $t1, $0,  15   ($t1=15)  0111 00 01 00001111     
-        IMemory[1] = 16'b0111_00_10_00000111;   // addi $t2, $0,  7    ($t2= 7)  0111 00 10 00000111     
-        IMemory[2] = 16'b0010_01_10_11_000000;  // and  $t3, $t1, $t2  ($t3= 7)  0010 01 10 11 xxxxxx   
-        IMemory[3] = 16'b0001_01_11_10_000000;  // sub  $t2, $t1, $t3  ($t2= 8)  0001 01 11 10 xxxxxx    
-        IMemory[4] = 16'b0011_10_11_10_000000;  // or   $t2, $t2, $t3  ($t2=15)  0011 10 11 10 xxxxxx    
-        IMemory[5] = 16'b0000_10_11_11_000000;  // add  $t3, $t2, $t3  ($t3=22)  0000 10 11 11 xxxxxx   
-        IMemory[6] = 16'b0100_10_11_01_000000;  // nor  $t1, $t2, $t3  ($t1=-32) 0100 10 11 01 xxxxxx
-        IMemory[7] = 16'b0110_11_10_01_000000;  // slt  $t1, $t3, $t2  ($t1= 0)  0110 11 10 01 xxxxxx    
-        IMemory[8] = 16'b0110_10_11_01_000000;  // slt  $t1, $t2, $t3  ($t1= 1)  0110 10 11 01 xxxxxx    
-    
-    /*  // Program: swap memory cells and compute absolute value
-    IMemory[0] = 16'b1000_01_0000000000;//32'h8c090000;  // lw $t1, 0($0) // 16'b1000_01_0000000000
-    IMemory[1] = 16'b1000_10_0000000100;//32'h8c0a0004;  // lw $t2, 4($0) // 16'b1000_11_0000000100
-    IMemory[2] = 16'b0110_01_11_10_000000;//32'h012a582a;  // slt $t3, $t1, $t2 // 16'b0110_01_11_10_000000
-    IMemory[3] = 32'h11600002;  // beq $t3, $0, IMemory[6] // 16'b1010_
-    IMemory[4] =16'b1001_01_0000000100;//32'hac090004;  // sw $t1, 4($0)  // 16'b1001_01_0000000100
-    IMemory[5] = 16'b1001_10_0000000000; //32'hac0a0000;  // sw $t2, 0($0)  // 16'b1001_10_0000000000
-    IMemory[6] = 16'b1000_01_0000000000;//32'h8c090000;  // lw $t1, 0($0)  // 16'b1000_01_0000000000
-    IMemory[7] = 16'b1000_10_0000000100; // 32'h8c0a0004;  // lw $t2, 4($0)  // 16'b1000_10_0000000100
-    IMemory[8] = 16'b0100_10_10_10_000000;//32'h014a5027;  // nor $t2, $t2, $t2 (sub $3, $1, $2 in two's complement) // 16'b0100_10_10_10_000000
-    IMemory[9] = 16'b0111_10_10_00000001; //32'h214a0001;  // addi $t2, $t2, 1 // 16'b0111_10_10_00000001
-    IMemory[10] = 16'b0000_01_11_10_000000; //32'h012a5820;  // add $t3, $t1, $t2 // 16'b0000_01_11_10_000000
- // Data
-    DMemory [0] = 16'd4; // swap the cells and see how the simulation output changes
-    DMemory [1] = 16'd7;
-    /*/
 
     IMemory[0] = 16'b1000_00_01_00000000;  // lw $1, 0($0)
-    IMemory[1] = 16'b1000_00_10_00000100;  // lw $2, 2($0)
+    IMemory[1] = 16'b1000_00_10_00000100;  // lw $2, 4($0)
     IMemory[2] = 16'b0110_01_10_11_000000;  // slt $3, $1, $2
-    IMemory[3] = 16'b1010_11_00_00000011;  // beq $3, $0, IMemory[6]
+    IMemory[3] = 16'b1010_11_00_00000110;  // beq $3, $0, IMemory[6]
     
     IMemory[4] = 16'b1001_00_01_00000100;  // sw $1, 4($0)
     IMemory[5] = 16'b1001_00_10_00000000;  // sw $2, 0($0)
 
-    IMemory[6] = 16'b1000_00_01_00000000;  // lw $1, 0($0)
-    IMemory[7] = 16'b1000_00_10_00000100;  // lw $2, 2($0)
+    IMemory[6] = 16'b1000_00_01_00000010;  // lw $1, 0($0)
+    IMemory[7] = 16'b1000_00_10_00001000;  // lw $2, 4($0)
 
     IMemory[8] = 16'b0001_01_10_11_000000;  // nor $2, $2, $2 (sub $3, $1, $2 in 2s complement)
     

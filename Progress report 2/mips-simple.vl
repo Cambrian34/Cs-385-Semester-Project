@@ -42,7 +42,7 @@ module MainControl (Op,Control);
    
     4'b1000: Control <= 11'b01110_00_0010; // LW
     
-    4'b1001: Control <= 11'b1001_00_0010; // SW  
+    4'b1001: Control <= 11'b01001_00_0010; // SW  
     
     4'b1010: Control <= 11'b00000_10_0110; // BEQ  
     4'b0111: Control <= 11'b01010_00_0010; // ADDI
@@ -75,6 +75,7 @@ module CPU (clock,WD,IR,PC);
   wire [15:0] IR,SignExtend,NextPC,RD2,A,B,ALUOut,PCplus4,Target;
   wire [1:0] WR;
   wire [3:0] ALUctl;
+
 
   initial begin
  // Program: swap memory cells and compute absolute value
@@ -119,6 +120,7 @@ module CPU (clock,WD,IR,PC);
   alu ex (ALUctl, A, B, ALUOut, Zero);
   alu branch (4'b0010,SignExtend<<1,PCplus4,Target,Unused2);
   MainControl MainCtr (IR[15:12],{RegDst,ALUSrc,MemtoReg,RegWrite,MemWrite,Beq,Bne,ALUctl});
+  ALUControl ALUCtrl (ALUOp,FuncCode,ALUCtl);
   assign WR = (RegDst) ? IR[7:6]: IR[9:8]; // RegDst Mux
   assign WD = (MemtoReg) ? DMemory[ALUOut>>2]: ALUOut; // MemtoReg Mux
   assign B  = (ALUSrc) ? SignExtend: RD2; // ALUSrc Mux

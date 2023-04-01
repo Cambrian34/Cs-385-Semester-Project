@@ -1,6 +1,6 @@
 // Behavioral model of MIPS - single cycle implementation
 module reg_file (RR1,RR2,WR,WD,RegWrite,RD1,RD2,clock);
-  input [4:0] RR1,RR2,WR;
+  input [1:0] RR1,RR2,WR;
   input [15:0] WD;
   input RegWrite,clock;
   output [15:0] RD1,RD2;
@@ -15,8 +15,8 @@ endmodule
 
 module alu (ALUctl,A,B,ALUOut,Zero);
   input [3:0] ALUctl;
-  input [31:0] A,B;
-  output reg [31:0] ALUOut;
+  input [15:0] A,B;
+  output reg [15:0] ALUOut;
   output Zero, Overflow;
   always @(ALUctl, A, B) // reevaluate if these change
     case (ALUctl)
@@ -36,9 +36,7 @@ module MainControl (Op,Control);
   output reg [10:0] Control;
 // RegDst,ALUSrc,MemtoReg,RegWrite,MemWrite,Beq,Bne,ALUCtl
   always @(Op) case (Op)
-    4'b0110: Control <= 11'b10010_00_0010; // SLT
-   
-   
+    4'b0110: Control <= 11'b1001_0_00_0010; // r-type
    
     4'b1000: Control <= 11'b01110_00_0010; // LW
     
@@ -64,12 +62,13 @@ module CPU (clock,WD,IR,PC);
     IMemory[0] = 16'b1000_00_01_00000000;  // lw $1, 0($0)
     IMemory[1] = 16'b1000_00_10_00000010;  // lw $2, 2($0)
     IMemory[2] = 16'b0110_01_10_11_000000;  // slt $3, $1, $2
-    IMemory[3] = 16'b1010_01_00_00000000;  // beq $3, $0, IMemory[6]
-    IMemory[4] = 16'b1001_00_10_00000010;  // sw $1, 2($0)
-    IMemory[5] = 16'b1001_00_01_00000000;  // sw $2, 0($0)
+    IMemory[3] = 16'b1010_11_00_00000000;  // beq $3, $0, IMemory[6]
+    IMemory[4] = 16'b1001_00_01_00000010;  // sw $1, 2($0)
+    IMemory[5] = 16'b1001_00_10_00000000;  // sw $2, 0($0)
     IMemory[6] = 16'b1000_00_01_00000000;  // lw $1, 0($0)
     IMemory[7] = 16'b1000_00_10_00000010;  // lw $2, 2($0)
-    IMemory[8] = 16'b0100_00_10_11_000000;  // nor $2, $2, $2 (sub $3, $1, $2 in 2s complement)
+    //
+    IMemory[8] = 16'b0100_10_10_10_000000;  // nor $2, $2, $2 (sub $3, $1, $2 in 2s complement)
     IMemory[9] = 16'b0111_01_10_11_000000;  // addi $2, $2, 1
     IMemory[10] = 16'b0000_01_10_11_000000;  // add $3, $1, $2
 
@@ -86,24 +85,27 @@ module CPU (clock,WD,IR,PC);
  
 
  */
-    DMemory [0] = 16'd7; // swap the cells and see how the simulation output changes
-    DMemory [1] = 16'd5;
+    DMemory [0] = 16'd5; // swap the cells and see how the simulation output changes
+    DMemory [1] = 16'd7;
   end
   initial PC = 0;
-  assign IR = IMemory[PC>>1];
+  assign IR = IMemory[PC>>2];
   assign SignExtend = {{8{IR[7]}},IR[7:0]}; // sign extension
   reg_file rf (IR[11:10],IR[9:8],WR,WD,RegWrite,A,RD2,clock);
-  alu fetch (4'b0010,PC,2,PCplus4,Unused1);
+  
+  alu fetch (4'b0010,PC,16'b100,PCplus4,Unused1);
   alu ex (ALUctl, A, B, ALUOut, Zero);
-  alu branch (4'b0010,SignExtend<<1,PCplus4,Target,Unused2);
+  alu branch (4'b0010,SignExtend<<2,PCplus4,Target,Unused2);
   MainControl MainCtr (IR[15:12],{RegDst,ALUSrc,MemtoReg,RegWrite,MemWrite,Beq,Bne,ALUctl});
   assign WR = (RegDst) ? IR[7:6]: IR[9:8]; // RegDst Mux
   assign WD = (MemtoReg) ? DMemory[ALUOut>>1]: ALUOut; // MemtoReg Mux
   assign B  = (ALUSrc) ? SignExtend: RD2; // ALUSrc Mux
+  
   assign NextPC = (Beq && Zero || Bne && ~Zero) ? Target: PCplus4; // Branch Mux
+  
   always @(negedge clock) begin
     PC <= NextPC;
-    if (MemWrite) DMemory[ALUOut>>1] <= RD2;
+    if (MemWrite) DMemory[ALUOut>>2] <= RD2;
   end
 endmodule
 
@@ -120,7 +122,20 @@ module test ();
     #20 $finish;
   end
 endmodule
-
+/* expected Output
+PC  IR                                WD
+ 0  10001100000010010000000000000000  5 (00000000000000000000000000000101)
+ 4  10001100000010100000000000000100  7 (00000000000000000000000000000111)
+ 8  00000001001010100101100000101010  1 (00000000000000000000000000000001)
+12  00010001011000000000000000000010  1 (00000000000000000000000000000001)
+16  10101100000010010000000000000100  4 (00000000000000000000000000000100)
+20  10101100000010100000000000000000  0 (00000000000000000000000000000000)
+24  10001100000010010000000000000000  7 (00000000000000000000000000000111)
+28  10001100000010100000000000000100  5 (00000000000000000000000000000101)
+32  00000001010010100101000000100111 -6 (11111111111111111111111111111010)
+36  00100001010010100000000000000001 -5 (11111111111111111111111111111011)
+40  00000001001010100101100000100000  2 (00000000000000000000000000000010)
+*/
 /* Output
 PC  IR                                WD
  0  10001100000010010000000000000000  5 (00000000000000000000000000000101)

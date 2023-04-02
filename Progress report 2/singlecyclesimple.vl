@@ -322,11 +322,11 @@ module mainctrl(Op,Control);
 		4'b0111: Control <= 11'b00_00_011_0010;  //addi
     
 		4'b1000: Control <= 11'b10_00_0_11_0010;  //lw
-
-    //MemtoReg, MemWrite,| Branch,| RegDst,| AluSrc, RegWrite,| AluCtrl
+  
+  
 		4'b1001: Control <= 11'b01_00_0_10_0010;  //sw
         
-		4'b1010: Control <= 11'b00_01_0_00_0110;  //beq
+		4'b1010: Control <= 11'b00_10_0_00_0110;  //beq
 		4'b1011: Control <= 11'b00_10_0_01_1010;  //bne
 
 	endcase
@@ -340,8 +340,8 @@ module branchctrl(Branchop,zero,bout);
     wire notzero,aa1,aa2;
 
     not n1 (notzero,zero);
-    and a1 (aa1,zero,Branchop[0]),
-        a2 (aa2,notzero,Branchop[1]);
+    and a1 (aa1,notzero,Branchop[0]),
+        a2 (aa2,zero,Branchop[1]);
     or o1 (bout,aa1,aa2);
 
 endmodule
@@ -363,25 +363,26 @@ module CPU (clock,WD,IR,PC);
     IMemory[0] = 16'b1000_00_01_00000000;  // lw $1, 0($0)
     IMemory[1] = 16'b1000_00_10_00000100;  // lw $2, 4($0)
     IMemory[2] = 16'b0110_01_10_11_000000;  // slt $3, $1, $2
-    IMemory[3] = 16'b1010_11_00_00000110;  // beq $3, $0, IMemory[6]
+    IMemory[3] = 16'b1010_11_00_00000011;  // beq $3, $0, IMemory[6]
     
     IMemory[4] = 16'b1001_00_01_00000100;  // sw $1, 4($0)
     IMemory[5] = 16'b1001_00_10_00000000;  // sw $2, 0($0)
 
-    IMemory[6] = 16'b1000_00_01_00000010;  // lw $1, 0($0)
-    IMemory[7] = 16'b1000_00_10_00001000;  // lw $2, 4($0)
+    IMemory[6] = 16'b1000_00_01_00000000;  // lw $1, 0($0)
+    IMemory[7] = 16'b1000_00_10_00000100;  // lw $2, 4($0)
 
-    IMemory[8] = 16'b0001_01_10_11_000000;  // nor $2, $2, $2 (sub $3, $1, $2 in 2s complement)
+   //IMemory[8] = 16'b0001_01_10_11_000000;  // nor $2, $2, $2 (sub $3, $1, $2 in 2s complement)
     
-    //IMemory[8] = 16'b0100_10_10_10_000000;  // nor $2, $2, $2 (sub $3, $1, $2 in 2s complement)
+    IMemory[8] = 16'b0100_10_10_10_000000;  // nor $2, $2, $2 (sub $3, $1, $2 in 2s complement)
+
     IMemory[9] = 16'b0111_10_10_00000001;  // addi $2, $2, 1
     
     IMemory[10] = 16'b0000_01_10_11_000000;  // add $3, $1, $2
 
     // Data
     DMemory [0] = 16'd5; // swap the cells and see how the simulation output changes
-    DMemory [1] = 16'd7;
-    DMemory [2] = 16'd1;
+    DMemory [1] = 16'd5;
+    
     //*/
     end
     
@@ -396,24 +397,24 @@ module CPU (clock,WD,IR,PC);
   //assign B
    mux16bit2x1 mx2(RD2,SignExtend,ALUSrc,B);
   //assign WD
-  // mux16bit2x1 muxWD (ALUOut, DMemory[ALUOut>2], MemtoReg, WD);
-   assign WD = (MemtoReg) ? DMemory[ALUOut>>2]: ALUOut; // MemtoReg Mux
+  mux16bit2x1 muxWD (ALUOut, DMemory[ALUOut>2], MemtoReg, WD);
+   //assign WD = (MemtoReg) ? DMemory[ALUOut>>2]: ALUOut; // MemtoReg Mux
    
  
   
   assign SignExtend = {{8{IR[7]}},IR[7:0]}; // sign extension unit
-  reg_file rf (IR[11:10], IR[9:8], WR, ALUOut, RegWrite, A, RD2, clock);
+  reg_file rf (IR[11:10], IR[9:8], WR, WD, RegWrite, A, RD2, clock);
  
-  ALU fetch (4'b0010, PC, 16'b100, PCplus4, Unused);
+  ALU fetch (4'b0010, PC, 16'b100, PCplus4, Unused1);
   ALU ex (ALUctl, A, B, ALUOut, Zero);
-  ALU branch (4'b0010, SignExtend<<2, PCplus4,Target, Unused);
+  ALU branch (4'b0010, SignExtend<<2, PCplus4,Target, Unused2);
   //MainControl MainCtr (IR[15:12],{RegDst,ALUSrc,RegWrite,ALUOp}); 
   //
 	mainctrl ainCtr (IR[15:12],{ MemtoReg, MemWrite, branchop,RegDst,ALUSrc,RegWrite,ALUctl});
 	//                             1     0      1      1110
 
 branchctrl branchCtr (branchop,Zero,BranchOut);
-//assign NextPC = (branchop[1] && Zero || branchop[0] && ~Zero) ? Target: PCplus4; // Branch Mux
+//assign NextPC = (branchop[0] && Zero) ? Target: PCplus4; // Branch Mux
 mux16bit2x1 muxBranch (PCplus4,Target, BranchOut, NextPC);
 
   always @(negedge clock) begin 

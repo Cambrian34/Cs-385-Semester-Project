@@ -86,7 +86,7 @@ module CPU (clock,WD,IR,PC);
     IMemory[10] = 32'h012a5820;  // add $t3, $t1, $t2 
  // Data
     DMemory [0] = 32'd5; // swap the cells and see how the simulation output changes
-    DMemory [1] = 32'd7;
+    DMemory [1] = 32'd5;
   end
   initial PC = 0;
   assign IR = IMemory[PC>>2];

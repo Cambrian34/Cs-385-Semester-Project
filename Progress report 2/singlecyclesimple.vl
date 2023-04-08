@@ -1,18 +1,18 @@
 
 //half adder
 module halfadder(S,C,x,y);
-input x,y;
-output S,C;
-xor x1 (S,x,y);
-and a1 (C,x,y);
+  input x,y;
+  output S,C;
+  xor x1 (S,x,y);
+  and a1 (C,x,y);
 endmodule
 
 //full adder
 module fulladder(S,C,x,y,z);
-input x,y,z;
-output S,C;
-wire S1,C1,C2;
-halfadder HA1 (S1,C1,x,y),
+  input x,y,z;
+    output S,C;
+  wire S1,C1,C2;
+  halfadder HA1 (S1,C1,x,y),
           HA2 (S,C2,S1,z);
     or C3(C,C2,C1);    
 endmodule 
@@ -66,8 +66,7 @@ module ALU(op,a,b,result,zero);
 	output [15:0] result;
 	output zero;
 	wire c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15;
-	
-ALU1    alu0 (a[0],b[0],op[3],op[2],op[1:0],set, op[2],c1,result[0]),
+  ALU1    alu0 (a[0],b[0],op[3],op[2],op[1:0],set, op[2],c1,result[0]),
         alu1 (a[1],b[1],op[3],op[2],op[1:0],1'b0,c1,   c2,result[1]),
       	alu2 (a[2],b[2],op[3],op[2],op[1:0],1'b0,c2,   c3,result[2]),
         alu3 (a[3],b[3],op[3],op[2],op[1:0],1'b0,c3,   c4,result[3]),
@@ -83,13 +82,13 @@ ALU1    alu0 (a[0],b[0],op[3],op[2],op[1:0],set, op[2],c1,result[0]),
       	alu13 (a[13],b[13],op[3],op[2],op[1:0],1'b0,c13,   c14,result[13]),
       	alu14 (a[14],b[14],op[3],op[2],op[1:0],1'b0,c14,   c15,result[14]);
 
-ALUmsb  alu15 (a[15],b[15],op[3],op[2],op[1:0],1'b0,c15,   c16,result[15],set);
+  ALUmsb  alu15 (a[15],b[15],op[3],op[2],op[1:0],1'b0,c15,   c16,result[15],set);
 
-or or1(or01, result[0],result[1]);
-or or2(or23, result[2],result[3]);
-nor nor1(zero,or01,or23);
+  or or1(or01, result[0],result[1]);
+  or or2(or23, result[2],result[3]);
+  nor nor1(zero,or01,or23);
 
-endmodule
+  endmodule
 
 // 1bit Alu
 module ALU1 (a,b,Ainvert,binvert,op,less,carryin,carryout,result);

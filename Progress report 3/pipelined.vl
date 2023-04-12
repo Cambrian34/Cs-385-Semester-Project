@@ -60,6 +60,26 @@ module ALUControl (ALUOp,FuncCode,ALUCtl);
     endcase
   endcase
 endmodule
+module mainctrl(Op,Control);
+    input [3:0] Op;
+    output reg [8:0] Control;
+	always @(Op) case (Op)
+	//extend 9 nine bits to accomadate the 9 bits of the control signal
+		//     RegDst,ALUSrc,RegWrite,ALUctl
+		4'b0000: Control <= 7'b101_0010;  //add
+		4'b0001: Control <= 7'b101_0110;  //sub
+		4'b0010: Control <= 7'b101_0000;  //and
+		4'b0011: Control <= 7'b101_0001;  //or
+		4'b0100: Control <= 7'b101_1100;  //nor
+		4'b0101: Control <= 7'b011_1010;  //nand
+		4'b0110: Control <= 7'b101_0111;  //slt
+		4'b0111: Control <= 7'b011_0010;  //addi
+		//4'b1000: Control <= 6'b10_1001;  //lw
+		//4'b1001: Control <= 6'b10_1100;  //sw
+		//4'b1010: Control <= 6'b10_1111;  //beq
+		//4'b1011: Control <= 6'b01_1010;  //bne
+	endcase
+endmodule
 
 module CPU (clock,PC,IFID_IR,IDEX_IR,WD);
   input clock;
@@ -82,7 +102,24 @@ module CPU (clock,PC,IFID_IR,IDEX_IR,WD);
     IMemory[12] = 32'h016a482a;  // slt  $t1, $t3, $t2  ($t1= 0)
     IMemory[13] = 32'h014b482a;  // slt  $t1, $t2, $t3  ($t1= 1)
   end
-
+*/
+initial begin
+        IMemory[0] = 16'b0111_00_01_00001111;   // addi $t1, $0,  15   ($t1=15)  0111 00 01 00001111     
+        IMemory[1] = 16'b0111_00_10_00000111;   // addi $t2, $0,  7    ($t2= 7)  0111 00 10 00000111     
+        IMemory[2]=  16'b0000_00_00_00000000;
+        IMemory[3] = 16'b0010_01_10_11_000000;  // and  $t3, $t1, $t2  ($t3= 7)  0010 01 10 11 xxxxxx   
+        IMemory[4]=  16'b0000_00_00_00000000;
+        IMemory[5] = 16'b0001_01_11_10_000000;  // sub  $t2, $t1, $t3  ($t2= 8)  0001 01 11 10 xxxxxx    
+        IMemory[6]=  16'b0000_00_00_00000000;
+        IMemory[7] = 16'b0011_10_11_10_000000;  // or   $t2, $t2, $t3  ($t2=15)  0011 10 11 10 xxxxxx    
+        IMemory[8]=  16'b0000_00_00_00000000;
+        IMemory[9] = 16'b0000_10_11_11_000000;  // add  $t3, $t2, $t3  ($t3=22)  0000 10 11 11 xxxxxx   
+        IMemory[10]=  16'b0000_00_00_00000000;
+        IMemory[11] = 16'b0100_10_11_01_000000;  // nor  $t1, $t2, $t3  ($t1=-32) 0100 10 11 01 xxxxxx
+        IMemory[12] = 16'b0110_11_10_01_000000;  // slt  $t1, $t3, $t2  ($t1= 0)  0110 11 10 01 xxxxxx    
+        IMemory[13] = 16'b0110_10_11_01_000000;  // slt  $t1, $t2, $t3  ($t1= 1)  0110 10 11 01 xxxxxx    
+end
+/*
   initial begin 
 // Program without nop's - wrong results due to data hazards
     IMemory[0] = 32'h2009000f;  // addi $t1, $0,  15   ($t1=15)
@@ -95,7 +132,7 @@ module CPU (clock,PC,IFID_IR,IDEX_IR,WD);
     IMemory[7] = 32'h016a482a;  // slt  $t1, $t3, $t2  ($t1= 0)
     IMemory[8] = 32'h014b482a;  // slt  $t1, $t2, $t3  ($t1= 1)
   end
-//*/
+//
 initial begin
         IMemory[0] = 16'b0111_00_01_00001111;   // addi $t1, $0,  15   ($t1=15)  0111 00 01 00001111     
         IMemory[1] = 16'b0111_00_10_00000111;   // addi $t2, $0,  7    ($t2= 7)  0111 00 10 00000111     
@@ -107,6 +144,7 @@ initial begin
         IMemory[7] = 16'b0110_11_10_01_000000;  // slt  $t1, $t3, $t2  ($t1= 0)  0110 11 10 01 xxxxxx    
         IMemory[8] = 16'b0110_10_11_01_000000;  // slt  $t1, $t2, $t3  ($t1= 1)  0110 10 11 01 xxxxxx    
 end
+*/
 // Pipeline stages
 
 //=== IF STAGE ===
@@ -128,21 +166,25 @@ end
    reg [4:0]  IDEX_rt,IDEX_rd;
    wire [1:0] WR;
    reg_file rf (IFID_IR[9:8],IFID_IR[11:10],WR,WD,IDEX_RegWrite,RD1,RD2,clock);
-   MainControl MainCtr (IFID_IR[15:12],Control); 
+   // refactor for maainctl used in report 1.
+   MainControl MainCtr (IFID_IR[15:12],Control);
+  // mainctrl mainw(IFID_IR[15:12],{Control,ALUctl}); 
    assign SignExtend = {{8{IFID_IR[7]}},IFID_IR[7:0]}; 
 
 //=== EXE STAGE ===
    wire [15:0] B,ALUOut;
    wire [3:0] ALUctl;
    alu ex (ALUctl, IDEX_RD1, B, ALUOut, Zero);
+   // Would removing this cause any problems
+   //mainctrl mainw(IFID_IR[15:12],{Control,ALUctl});
    ALUControl ALUCtrl(IDEX_ALUOp, IDEX_SignExt[5:0], ALUctl); // ALU control unit
    assign B  = (IDEX_ALUSrc) ? IDEX_SignExt: IDEX_RD2;   // ALUSrc Mux 
    assign WR = (IDEX_RegDst) ? IDEX_rd: IDEX_rt;         // RegDst Mux
    assign WD = ALUOut;
 
 // Forwarding multiplexers
-   assign FWD_RD1 = (IDEX_RegWrite && WR==IFID_IR[25:21]) ? ALUOut: RD1;
-   assign FWD_RD2 = (IDEX_RegWrite && WR==IFID_IR[20:16]) ? ALUOut: RD2;
+   assign FWD_RD1 = (IDEX_RegWrite && WR==IFID_IR[11:10]) ? ALUOut: RD1;
+   assign FWD_RD2 = (IDEX_RegWrite && WR==IFID_IR[9:8]) ? ALUOut: RD2;
 
    initial begin
     PC = 0;
@@ -186,7 +228,7 @@ module test ();
   always #1 clock = ~clock;
   initial begin
     $display ("PC  IFID_IR   IDEX_IR   WD");
-    $monitor ("%2d  %h      %h     %2d",PC,IFID_IR,IDEX_IR,WD);
+    $monitor ("%2d  %b      %b     %2d",PC,IFID_IR,IDEX_IR,WD);
     clock = 1;
     #29 $finish;
   end

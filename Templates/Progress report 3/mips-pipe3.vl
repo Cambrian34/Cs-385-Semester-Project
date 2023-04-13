@@ -64,9 +64,9 @@ endmodule
 module CPU (clock,PC,IFID_IR,IDEX_IR,WD);
   input clock;
   output [31:0] PC,IFID_IR,IDEX_IR,WD;
-  
+ /* 
   initial begin
-// Program with nop's - no hazards
+/* / Program with nop's - no hazards
     IMemory[0]  = 32'h2009000f;  // addi $t1, $0,  15   ($t1=15)
     IMemory[1]  = 32'h200a0007;  // addi $t2, $0,  7    ($t2= 7)
     IMemory[2]  = 32'h00000000;  // nop
@@ -82,7 +82,7 @@ module CPU (clock,PC,IFID_IR,IDEX_IR,WD);
     IMemory[12] = 32'h016a482a;  // slt  $t1, $t3, $t2  ($t1= 0)
     IMemory[13] = 32'h014b482a;  // slt  $t1, $t2, $t3  ($t1= 1)
   end
-/*
+/ */
   initial begin 
 // Program without nop's - wrong results due to data hazards
     IMemory[0] = 32'h2009000f;  // addi $t1, $0,  15   ($t1=15)
@@ -95,7 +95,7 @@ module CPU (clock,PC,IFID_IR,IDEX_IR,WD);
     IMemory[7] = 32'h016a482a;  // slt  $t1, $t3, $t2  ($t1= 0)
     IMemory[8] = 32'h014b482a;  // slt  $t1, $t2, $t3  ($t1= 1)
   end
-*/
+//* /
 // Pipeline stages
 //=== IF STAGE ===
    wire [31:0] NextPC;

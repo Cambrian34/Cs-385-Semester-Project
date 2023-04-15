@@ -33,38 +33,12 @@ module alu (ALUctl,A,B,ALUOut,Zero);
   assign Zero = (ALUOut==0); // Zero is true if ALUOut is 0
 endmodule
 
-module MainControl (Op,Control); 
-  input [3:0] Op;
-  output reg [4:0] Control;
-// Control bits: RegDst,ALUSrc,RegWrite,ALUOp
-  always @(Op) case (Op)
-    6'b000000: Control <= 5'b10110; // Rtype
-    6'b001000: Control <= 5'b01100; // ADDI
-  endcase
-endmodule
-
-module ALUControl (ALUOp,FuncCode,ALUCtl); 
-  input [1:0] ALUOp;
-  input [5:0] FuncCode;
-  output reg [3:0] ALUCtl;
-  always @(ALUOp,FuncCode) case (ALUOp)
-    2'b00: ALUCtl <= 4'b0010; // add
-    2'b01: ALUCtl <= 4'b0110; // subtract
-    2'b10: case (FuncCode)
-	     32: ALUCtl <= 4'b0010; // add
-	     34: ALUCtl <= 4'b0110; // sub
-	     36: ALUCtl <= 4'b0000; // and
-	     37: ALUCtl <= 4'b0001; // or
-	     39: ALUCtl <= 4'b1100; // nor
-	     42: ALUCtl <= 4'b0111; // slt
-    endcase
-  endcase
-endmodule
 module mainctrl(Op,Control);
     input [3:0] Op;
     output reg [6:0] Control;
 	always @(Op) case (Op)
   // branchop is 2 bits
+  // how would i go about implenting jump?
   //MemtoReg, MemWrite_ branchop_RegDst_ALUSrc,RegWrite_ALUctl
     4'b0000: Control <= 11'b00_00_1_01_0010;  //add
 		4'b0001: Control <= 7'b101_0110;  //sub
@@ -82,6 +56,7 @@ module mainctrl(Op,Control);
         
 		4'b1010: Control <= 7'b0_00_0110;  //beq
 		4'b1011: Control <= 7'b0_01_1010;  //bne
+    4'b1100: Control <= 7'b000000; //j
 
 	endcase
 endmodule

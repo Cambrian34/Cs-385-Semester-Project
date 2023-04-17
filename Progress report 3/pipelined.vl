@@ -35,35 +35,50 @@ endmodule
 
 module mainctrl(Op,Control);
     input [3:0] Op;
-    output reg [6:0] Control;
+    output reg [7:0] Control;
 	always @(Op) case (Op)
   // branchop is 2 bits
   // how would i go about implenting jump?
   //MemtoReg, MemWrite_ branchop_RegDst_ALUSrc,RegWrite_ALUctl
-    4'b0000: Control <= 11'b00_00_1_01_0010;  //add
-		4'b0001: Control <= 7'b101_0110;  //sub
-		4'b0010: Control <= 7'b101_0000;  //and
-		4'b0011: Control <= 7'b101_0001;  //or
-		4'b0100: Control <= 7'b101_1100;  //nor
-		4'b0101: Control <= 7'b011_1010;  //nand
-		4'b0110: Control <= 7'b101_0111;  //slt
-		4'b0111: Control <= 7'b011_0010;  //addi
-    
-		4'b1000: Control <= 7'b0_11_0010;  //lw
-  
-  
-		4'b1001: Control <= 7'b0_10_0010;  //sw
-        
-		4'b1010: Control <= 7'b0_00_0110;  //beq
-		4'b1011: Control <= 7'b0_01_1010;  //bne
-    4'b1100: Control <= 7'b000000; //j
+    4'b0000: Control <= 8'b01_01_0010;  //add
+		4'b0001: Control <= 8'b0101_0110;  //sub
+		4'b0010: Control <= 8'b0101_0000;  //and
+		4'b0011: Control <= 8'b0101_0001;  //or
+		4'b0100: Control <= 8'b0101_1100;  //nor
+		4'b0101: Control <= 8'b0011_1010;  //nand
+		4'b0110: Control <= 8'b0101_0111;  //slt
+		4'b0111: Control <= 8'b0011_0010;  //addi 
+		4'b1000: Control <= 8'b00_11_0010;  //lw
+		4'b1001: Control <= 8'b00_10_0010;  //sw
+    4'b1010: Control <= 8'b00_00_0110;  //beq
+		4'b1011: Control <= 8'b00_01_1010;  //bne
+    4'b1100: Control <= 8'b1_000_0000; //j
 
 	endcase
 endmodule
 
-module CPU (clock,PC,IFID_IR,IDEX_IR,WD);
+// jump control
+module jumpctrl(jumpop,pc, addr, pcout);
+
+    input [11:0]addr;
+    input  jumpop;
+    output [15:0]pcout;
+    input [15:0]pc;
+    //if jumpop is 1, then pcout = addr padded with 0s
+    //else if jumpop is 0, then pcout = to original pc
+    // output pc 
+    // input jumpop, addr
+    // output pcout
+    wire [15:0]pcout1,pcout2;
+    assign pcout1 = {4'b0000,addr};
+    assign pcout2 = pc;
+    assign pcout = jumpop ? pcout1 : pcout2;
+
+ endmodule 
+
+module CPU (clock,PC,IFID_IR,IDEX_IR,WD,pcchange);
   input clock;
-  output [15:0] PC,IFID_IR,IDEX_IR,WD;
+  output [15:0] PC,IFID_IR,IDEX_IR,WD,pcchange;
   reg IDEX_MemtoReg,IDEX_MemWrite;
   reg [1:0]branchop;
 
@@ -86,24 +101,26 @@ module CPU (clock,PC,IFID_IR,IDEX_IR,WD);
     IMemory[12] = 32'h016a482a;  // slt  $t1, $t3, $t2  ($t1= 0)
     IMemory[13] = 32'h014b482a;  // slt  $t1, $t2, $t3  ($t1= 1)
   end
-// * /
+// */
 initial begin
         IMemory[0] = 16'b0111_00_01_00001111;   // addi $t1, $0,  15   ($t1=15)  0111 00 01 00001111     
         IMemory[1] = 16'b0111_00_10_00000111;   // addi $t2, $0,  7    ($t2= 7)  0111 00 10 00000111     
-        IMemory[2]=  16'b0000_00_00_00000000;
+        IMemory[2]=  16'b0000_00_00_00000000;   // nop
         IMemory[3] = 16'b0010_01_10_11_000000;  // and  $t3, $t1, $t2  ($t3= 7)  0010 01 10 11 xxxxxx   
-        IMemory[4]=  16'b0000_00_00_00000000;
+        IMemory[4]=  16'b0000_00_00_00000000;   // nop
         IMemory[5] = 16'b0001_01_11_10_000000;  // sub  $t2, $t1, $t3  ($t2= 8)  0001 01 11 10 xxxxxx    
-        IMemory[6]=  16'b0000_00_00_00000000;
+        IMemory[6]=  16'b0000_00_00_00000000;   // nop
         IMemory[7] = 16'b0011_10_11_10_000000;  // or   $t2, $t2, $t3  ($t2=15)  0011 10 11 10 xxxxxx    
-        IMemory[8]=  16'b0000_00_00_00000000;
+        IMemory[8]=  16'b0000_00_00_00000000;   // nop
         IMemory[9] = 16'b0000_10_11_11_000000;  // add  $t3, $t2, $t3  ($t3=22)  0000 10 11 11 xxxxxx   
-        IMemory[10]=  16'b0000_00_00_00000000;
+        IMemory[10]=  16'b0000_00_00_00000000;  // nop
         IMemory[11] = 16'b0100_10_11_01_000000;  // nor  $t1, $t2, $t3  ($t1=-32) 0100 10 11 01 xxxxxx
         IMemory[12] = 16'b0110_11_10_01_000000;  // slt  $t1, $t3, $t2  ($t1= 0)  0110 11 10 01 xxxxxx    
-        IMemory[13] = 16'b0110_10_11_01_000000;  // slt  $t1, $t2, $t3  ($t1= 1)  0110 10 11 01 xxxxxx    
+        IMemory[13] = 16'b0110_10_11_01_000000;  // slt  $t1, $t2, $t3  ($t1= 1)  0110 10 11 01 xxxxxx  
+        IMemory[14] = 16'b0000_000000000000;   // nop
+        IMemory[15] = 16'b1100_000000000000;   // jump 0x0000
 end
-* /
+/* /
   initial begin 
 // Program without nop's - wrong results due to data hazards
     IMemory[0] = 32'h2009000f;  // addi $t1, $0,  15   ($t1=15)
@@ -116,7 +133,7 @@ end
     IMemory[7] = 32'h016a482a;  // slt  $t1, $t3, $t2  ($t1= 0)
     IMemory[8] = 32'h014b482a;  // slt  $t1, $t2, $t3  ($t1= 1)
   end
-/ */
+/*
 initial begin
         IMemory[0] = 16'b0111_00_01_00001111;   // addi $t1, $0,  15   ($t1=15)  0111 00 01 00001111     
         IMemory[1] = 16'b0111_00_10_00000111;   // addi $t2, $0,  7    ($t2= 7)  0111 00 10 00000111     
@@ -128,7 +145,7 @@ initial begin
         IMemory[7] = 16'b0110_11_10_01_000000;  // slt  $t1, $t3, $t2  ($t1= 0)  0110 11 10 01 xxxxxx    
         IMemory[8] = 16'b0110_10_11_01_000000;  // slt  $t1, $t2, $t3  ($t1= 1)  0110 10 11 01 xxxxxx    
 end
-// * /
+//  */
 // Pipeline stages
 
 //=== IF STAGE ===
@@ -154,13 +171,15 @@ end
    reg_file rf (IFID_IR[11:10],IFID_IR[9:8],WR,WD,IDEX_RegWrite,RD1,RD2,clock);
    // refactor for maainctl used in report 1.
   // MainControl MainCtr (IFID_IR[15:12],Control);
-   mainctrl ainCtr (IFID_IR[15:12],control);
+   mainctrl ainCtr (IFID_IR[15:12],{jumpop,control});
   // mainctrl mainw(IFID_IR[15:12],{Control,ALUctl}); 
    assign SignExtend = {{8{IFID_IR[7]}},IFID_IR[7:0]}; 
 
 //=== EXE STAGE ===
    wire [15:0] B,ALUOut;
    reg [3:0] ALUctl;
+     reg signed jump;
+
    alu ex (ALUctl, IDEX_RD1, B, ALUOut, Zero);
    // Would removing this cause any problems
    //mainctrl mainw(IFID_IR[15:12],{Control,ALUctl});
@@ -172,18 +191,21 @@ end
 // Forwarding multiplexers
    assign FWD_RD1 = (IDEX_RegWrite && WR==IFID_IR[11:10]) ? ALUOut: RD1;
    assign FWD_RD2 = (IDEX_RegWrite && WR==IFID_IR[9:8]) ? ALUOut: RD2;
+  jumpctrl jumpct(jumpop,NextPC, IDEX_IR[11:0], pcchange);
 
    initial begin
     PC = 0;
     IFID_IR = 0; // clear pipeline register to avoid forwarding from empty pipeline
     IDEX_RegWrite = 0; 
-   end
+    
 
+   end
+  wire [15:0]pcchange;
 // Running the pipeline
    always @(negedge clock) begin
 
 // Stage 1 - IF
-    PC <= NextPC;
+    PC <= pcchange;
     IFID_IR <= IMemory[PC>>2];
 
 // Stage 2 - ID
@@ -211,14 +233,14 @@ endmodule
 // Test module
 module test ();
   reg clock;
-  wire signed [15:0] PC,IFID_IR,IDEX_IR,WD;
-  CPU test_cpu(clock,PC,IFID_IR,IDEX_IR,WD);
+  wire signed [15:0] PC,IFID_IR,IDEX_IR,WD,pcchange;
+  CPU test_cpu(clock,PC,IFID_IR,IDEX_IR,WD,pcchange);
   always #1 clock = ~clock;
   initial begin
-    $display ("PC  IFID_IR   IDEX_IR   WD");
-    $monitor ("%2d  %b      %b     %2d",PC,IFID_IR,IDEX_IR,WD);
+    $display ("PC  IFID_IR   IDEX_IR   WD ");
+    $monitor ("%2d  %b      %b     %2d    %d",PC,IFID_IR,IDEX_IR,WD, pcchange);
     clock = 1;
-    #29 $finish;
+    #49 $finish;
   end
 endmodule
 

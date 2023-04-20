@@ -1,0 +1,153 @@
+/* Direct mapped cache
+   5-bit address
+   5-bit word
+   8 one-word blocks
+*/
+module DataCache(Address,Write,WriteData,ReadData,Hit,Clock);
+  input Write, Clock;
+  input [4:0] Address;        // Memory address: 5 bits
+  input [4:0] WriteData;
+  output reg [4:0] ReadData;
+  output reg Hit;
+
+  reg [4:0] Memory [31:0];    // Memory: 32 5-bit words, word addressed 
+
+  reg [4:0] CacheData [7:0];  // 8 one-word blocks, 5-bit word
+  reg [2:0] CacheTag [7:0];
+  reg CacheValidBit [7:0];
+
+  wire [2:0] CacheIndex;      // 3-bit cache index = Address [2:0]
+  assign CacheIndex = Address[2:0];
+
+  reg [31:0] i; // temp 
+  reg [4:0] X;  // no valid data
+
+  // Clear cache
+  initial 
+    for (i=0; i<8; i=i+1) begin 
+       CacheData [i] = 0;
+       CacheTag [i] = 0;
+       CacheValidBit[i] = 0; 
+    end
+    
+   // Read
+   always @(negedge Clock)
+     if (Write==0) begin 
+       if (CacheTag[CacheIndex] == Address[4:3] & CacheValidBit[CacheIndex]==1) begin 
+          Hit = 1;                                  // cache hit   
+          ReadData = CacheData[CacheIndex];         // get the word from cache
+       end
+       else begin
+          Hit = 0;                                  // cache miss
+          CacheData[CacheIndex] = Memory[Address];  // write into cache
+          CacheTag[CacheIndex] = Address[4:3];      // set up tag
+          CacheValidBit[CacheIndex] = 1;            // set valid bit 
+          ReadData = CacheData[CacheIndex];         // read from cache
+       end
+     end
+
+   // Write 
+   always @(negedge Clock)
+     if (Write==1) begin  
+       if (CacheTag[CacheIndex] == Address[4:3] & CacheValidBit[CacheIndex]==1)
+          Hit = 1;                                  // cache hit
+       else begin
+          Hit = 0;                                  // cache miss
+          CacheTag[CacheIndex] = Address[4:3];      // set up tag
+          CacheValidBit[CacheIndex] <= 1;            // set valid bit
+        end                                          // write through
+        CacheData[CacheIndex] = WriteData;          // write into cache
+        Memory[Address] = WriteData;                // write into memory
+     end
+endmodule
+
+module test;
+  reg[4:0] Address;
+  reg Clock, Write;
+  reg [4:0] WriteData;
+  wire [4:0] ReadData;
+  wire Hit;
+  reg [31:0] i;
+
+  DataCache cache(Address,Write,WriteData,ReadData,Hit,Clock);
+
+  initial begin
+    // Writing 
+    Write=1;
+    // Fill the whole memory through the cache
+    $display ("Address     Hit WriteData");
+    for (i=0; i<32; i=i+1) begin
+      #1 Address=i; WriteData=i; Clock=1; #1 Clock=0; 
+      #1 $display ("%2d(%b)   %b   %b",Address,Address,Hit,WriteData);
+    end
+    // More writes
+    $display ("Address     Hit WriteData");
+    #1 Address=1; WriteData=11; Clock=1; #1 Clock=0; #1 $display ("%2d(%b)   %b   %b",Address,Address,Hit,WriteData);
+    #1 Address=9; WriteData=19; Clock=1; #1 Clock=0; #1 $display ("%2d(%b)   %b   %b",Address,Address,Hit,WriteData);
+    #1 Address=5; WriteData=15; Clock=1; #1 Clock=0; #1 $display ("%2d(%b)   %b   %b",Address,Address,Hit,WriteData);
+    #1 Address=28; WriteData=18; Clock=1; #1 Clock=0; #1 $display ("%2d(%b)   %b   %b",Address,Address,Hit,WriteData);
+
+    // Reading
+    #1 Write=0; 
+    #1 $display ("Address     Hit ReadData");
+    #1 Address=1; Clock=1; #1 Clock=0; #1 $display ("%2d(%b)   %b   %b",Address,Address,Hit,ReadData);
+    #1 Address=5; Clock=1; #1 Clock=0; #1 $display ("%2d(%b)   %b   %b",Address,Address,Hit,ReadData);
+    #1 Address=1; Clock=1; #1 Clock=0; #1 $display ("%2d(%b)   %b   %b",Address,Address,Hit,ReadData);
+    #1 Address=9; Clock=1; #1 Clock=0; #1 $display ("%2d(%b)   %b   %b",Address,Address,Hit,ReadData);
+    #1 Address=5; Clock=1; #1 Clock=0; #1 $display ("%2d(%b)   %b   %b",Address,Address,Hit,ReadData);
+    #1 Address=9; Clock=1; #1 Clock=0; #1 $display ("%2d(%b)   %b   %b",Address,Address,Hit,ReadData);
+    #1 Address=28; Clock=1; #1 Clock=0; #1 $display ("%2d(%b)   %b   %b",Address,Address,Hit,ReadData);
+    #1 Address=31; Clock=1; #1 Clock=0; #1 $display ("%2d(%b)   %b   %b",Address,Address,Hit,ReadData);
+  end
+endmodule
+
+/* Test output
+
+Address     Hit WriteData
+ 0(00000)   0   00000
+ 1(00001)   0   00001
+ 2(00010)   0   00010
+ 3(00011)   0   00011
+ 4(00100)   0   00100
+ 5(00101)   0   00101
+ 6(00110)   0   00110
+ 7(00111)   0   00111
+ 8(01000)   0   01000
+ 9(01001)   0   01001
+10(01010)   0   01010
+11(01011)   0   01011
+12(01100)   0   01100
+13(01101)   0   01101
+14(01110)   0   01110
+15(01111)   0   01111
+16(10000)   0   10000
+17(10001)   0   10001
+18(10010)   0   10010
+19(10011)   0   10011
+20(10100)   0   10100
+21(10101)   0   10101
+22(10110)   0   10110
+23(10111)   0   10111
+24(11000)   0   11000
+25(11001)   0   11001
+26(11010)   0   11010
+27(11011)   0   11011
+28(11100)   0   11100
+29(11101)   0   11101
+30(11110)   0   11110
+31(11111)   0   11111
+Address     Hit WriteData
+ 1(00001)   0   01011
+ 9(01001)   0   10011
+ 5(00101)   0   01111
+28(11100)   1   10010
+Address     Hit ReadData
+ 1(00001)   0   01011
+ 5(00101)   1   01111
+ 1(00001)   1   01011
+ 9(01001)   0   10011
+ 5(00101)   1   01111
+ 9(01001)   1   10011
+28(11100)   1   10010
+31(11111)   1   11111
+*/

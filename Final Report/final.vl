@@ -1,0 +1,579 @@
+//half adder
+module halfadder(S,C,x,y);
+  input x,y;
+  output S,C;
+  xor x1 (S,x,y);
+  and a1 (C,x,y);
+endmodule
+
+//full adder
+module fulladder(S,C,x,y,z);
+  input x,y,z;
+    output S,C;
+  wire S1,C1,C2;
+  halfadder HA1 (S1,C1,x,y),
+          HA2 (S,C2,S1,z);
+    or C3(C,C2,C1);    
+endmodule 
+
+// 4x1 multiplexer 
+module mux4x1(i0,i1,i2,i3,select,y);
+
+	input i0,i1,i2,i3;
+	input [1:0] select;
+	output y;
+	wire S0,S1,w1,w2,w3,w4;
+	
+	not not1(S0,select[0]),
+		not2(S1,select[1]);
+	
+	and and1(w1,i0,S1,S0),
+		and2(w2,i1,S1,select[0]),
+		and3(w3,i2,select[1],S0),
+		and4(w4,i3,select[1],select[0]);
+		
+	or  or1(y,w1,w2,w3,w4);
+	
+endmodule
+
+//2x1 multplexer
+module mux2x1(A,B,select,OUT); 
+  input A,B,select; 
+  output OUT;
+
+  not not1(i0, select);
+  and and1(i1, A, i0);
+  and and2(i2, B, select);
+  or or1(OUT, i1, i2);
+endmodule
+
+module mux_2(result,a,b,c);
+	input a,b,c;
+	output result;
+	wire w1,w2,w3;
+
+	not (w3,c);
+	and g1(w1,b,c),
+	    g2(w2,a,w3);
+	or  g3(result,w1,w2);
+endmodule
+
+//16 bit ALU
+module ALU(op,a,b,result,zero);
+	input [15:0] a,b;
+	input [3:0] op;
+	output [15:0] result;
+	output zero;
+	wire c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15;
+  ALU1    alu0 (a[0],b[0],op[3],op[2],op[1:0],set, op[2],c1,result[0]),
+        alu1 (a[1],b[1],op[3],op[2],op[1:0],1'b0,c1,   c2,result[1]),
+      	alu2 (a[2],b[2],op[3],op[2],op[1:0],1'b0,c2,   c3,result[2]),
+        alu3 (a[3],b[3],op[3],op[2],op[1:0],1'b0,c3,   c4,result[3]),
+    	alu4 (a[4],b[4],op[3],op[2],op[1:0],1'b0,c4,   c5,result[4]),
+    	alu5 (a[5],b[5],op[3],op[2],op[1:0],1'b0,c5,   c6,result[5]),
+	    alu6 (a[6],b[6],op[3],op[2],op[1:0],1'b0,c6,   c7,result[6]),
+	    alu7 (a[7],b[7],op[3],op[2],op[1:0],1'b0,c7,   c8,result[7]),
+      	alu8 (a[8],b[8],op[3],op[2],op[1:0],1'b0,c8,   c9,result[8]),
+      	alu9 (a[9],b[9],op[3],op[2],op[1:0],1'b0,c9,   c10,result[9]),
+      	alu10 (a[10],b[10],op[3],op[2],op[1:0],1'b0,c10,   c11,result[10]),
+      	alu11 (a[11],b[11],op[3],op[2],op[1:0],1'b0,c11,   c12,result[11]),
+      	alu12 (a[12],b[12],op[3],op[2],op[1:0],1'b0,c12,   c13,result[12]),
+      	alu13 (a[13],b[13],op[3],op[2],op[1:0],1'b0,c13,   c14,result[13]),
+      	alu14 (a[14],b[14],op[3],op[2],op[1:0],1'b0,c14,   c15,result[14]);
+
+  ALUmsb  alu15 (a[15],b[15],op[3],op[2],op[1:0],1'b0,c15,   c16,result[15],set);
+
+  or or1(or01, result[0],result[1]);
+  or or2(or23, result[2],result[3]);
+  nor nor1(zero,or01,or23);
+
+  endmodule
+
+// 1bit Alu
+module ALU1 (a,b,Ainvert,binvert,op,less,carryin,carryout,result);
+   input a,b,carryin,binvert,Ainvert;
+   input [1:0] op;
+   input  less;
+   output carryout,result;
+   wire sum, a_and_b, a_or_b, b_inv,a_inv;
+   
+   not not1(a_inv, a);
+   not not2(b_inv, b);
+   
+   mux2x1 x1(a,a_inv,Ainvert,a1),
+            mux1(b,b_inv,binvert,b1);
+   and and1(a_and_b, a1, b1);
+   or or1(a_or_b, a1, b1);
+
+   fulladder adder1(sum,carryout,a1,b1,carryin);
+   mux4x1 mux2(a_and_b,a_or_b,sum,less,op[1:0],result); 
+
+endmodule
+
+//1 bit alu significant bit
+module ALUmsb (a,b,ainvert,binvert,op,less,carryin,carryout,result,sum);
+   input a,b,carryin,binvert,ainvert;
+   input [1:0] op;
+   input less;
+   output carryout,result,sum;
+   wire sum, a_and_b, a_or_b, b_inv,a_inv;
+   
+   not not1(a_inv, a);
+   not not2(b_inv, b);
+   mux2x1 x1(a,a_inv,ainvert,a1),
+            mux1(b,b_inv,binvert,b1);
+   and and1(a_and_b, a1, b1);
+   or or1(a_or_b, a1, b1);
+   fulladder adder1(sum,carryout,a1,b1,carryin);
+   mux4x1 mux2(a_and_b,a_or_b,sum,less,op[1:0],result); 
+
+endmodule
+
+// register file
+module reg_file(rr1,rr2,wr,wd,regwrite,rd1,rd2,clock);
+	input [1:0] rr1,rr2,wr;
+	input [15:0] wd;
+	input regwrite,clock;
+	output [15:0] rd1,rd2;
+	wire [15:0] q1,q2,q3;	
+
+	register reg1(wd,c1,q1);
+	register reg2(wd,c2,q2);
+	register reg3(wd,c3,q3);
+
+	mux4x1_16bit mux1 (16'b0,q1,q2,q3,rr1,rd1),
+				 mux2 (16'b0,q1,q2,q3,rr2,rd2);
+
+	decoder dec(wr[1],wr[0],w3,w2,w1,w0);
+	
+	and and0 (regwrite_and_clock,regwrite,clock),
+		and1 (c1,regwrite_and_clock,w1),
+		and2 (c2,regwrite_and_clock,w2),
+		and3 (c3,regwrite_and_clock,w3);
+endmodule
+
+
+// 16 bit register
+module register(WriteData,CLK, ReadData);
+   input [15:0] WriteData;
+   input CLK;
+   output [15:0] ReadData;
+   D_flip_flop r0(WriteData[0], CLK, ReadData[0]),
+    	r1(WriteData[1], CLK, ReadData[1]),
+		r2(WriteData[2], CLK, ReadData[2]),
+    	r3(WriteData[3], CLK, ReadData[3]),
+    	r4(WriteData[4], CLK, ReadData[4]),
+    	r5(WriteData[5], CLK, ReadData[5]),
+    	r6(WriteData[6], CLK, ReadData[6]),
+    	r7(WriteData[7], CLK, ReadData[7]),
+    	r8(WriteData[8], CLK, ReadData[8]),
+    	r9(WriteData[9], CLK, ReadData[9]),
+    	r10(WriteData[10], CLK, ReadData[10]),
+    	r11(WriteData[11], CLK, ReadData[11]),
+    	r12(WriteData[12], CLK, ReadData[12]),
+    	r13(WriteData[13], CLK, ReadData[13]),
+    	r14(WriteData[14], CLK, ReadData[14]),
+    	r15(WriteData[15], CLK, ReadData[15]);
+endmodule
+
+//2 bit 2x1 mulitplexer
+module mux2bit2x1(A,B,select,OUT);
+	input [1:0] A,B;
+    input select;
+	output [1:0] OUT;
+
+    mux2x1 m1(A[0], B[0], select, OUT[0]),
+           m2(A[1], B[1], select, OUT[1]);
+endmodule
+
+// 16 bit 2x1 multiplexer
+module mux16bit2x1(A, B, select, OUT);
+	input [15:0] A,B;
+    input select;
+	output [15:0] OUT;
+
+    mux2x1 mux1(A[0], B[0], select, OUT[0]),
+           mux2(A[1], B[1], select, OUT[1]),
+           mux3(A[2], B[2], select, OUT[2]),
+           mux4(A[3], B[3], select, OUT[3]),
+           mux5(A[4], B[4], select, OUT[4]),
+           mux6(A[5], B[5], select, OUT[5]),
+           mux7(A[6], B[6], select, OUT[6]),
+           mux8(A[7], B[7], select, OUT[7]),
+           mux9(A[8], B[8], select, OUT[8]),
+           mux10(A[9], B[9], select, OUT[9]),
+           mux11(A[10], B[10], select, OUT[10]),
+           mux12(A[11], B[11], select, OUT[11]),
+           mux13(A[12], B[12], select, OUT[12]),
+           mux14(A[13], B[13], select, OUT[13]),
+           mux15(A[14], B[14], select, OUT[14]),
+           mux16(A[15], B[15], select, OUT[15]);
+endmodule
+
+
+// 16 bit 4x1 muliplexer
+module mux4x1_16bit(i0,i1,i2,i3,select,y);
+	input [15:0] i0,i1,i2,i3;
+	input [1:0] select;
+	output [15:0] y;
+	
+	mux4x1 mux1 (1'b0,i1[0], i2[0], i3[0], select[1:0],y[0]),
+		   mux2 (1'b0,i1[1], i2[1], i3[1], select[1:0],y[1]),
+		   mux3 (1'b0,i1[2], i2[2], i3[2], select[1:0],y[2]),
+		   mux4 (1'b0,i1[3], i2[3], i3[3], select[1:0],y[3]),
+		   
+		   mux5 (1'b0,i1[4], i2[4], i3[4], select[1:0],y[4]),
+		   mux6 (1'b0,i1[5], i2[5], i3[5], select[1:0],y[5]),
+		   mux7 (1'b0,i1[6], i2[6], i3[6], select[1:0],y[6]),
+		   mux8 (1'b0,i1[7], i2[7], i3[7], select[1:0],y[7]),
+		   
+		   mux9 (1'b0,i1[8], i2[8], i3[8], select[1:0],y[8]),
+		   mux10(1'b0,i1[9], i2[9], i3[9], select[1:0],y[9]),
+		   mux11(1'b0,i1[10],i2[10],i3[10],select[1:0],y[10]),
+		   mux12(1'b0,i1[11],i2[11],i3[11],select[1:0],y[11]),
+		   
+		   mux13(1'b0,i1[12],i2[12],i3[12],select[1:0],y[12]),
+		   mux14(1'b0,i1[13],i2[13],i3[13],select[1:0],y[13]),
+		   mux15(1'b0,i1[14],i2[14],i3[14],select[1:0],y[14]),
+		   mux16(1'b0,i1[15],i2[15],i3[15],select[1:0],y[15]);		   
+endmodule
+
+// decoder
+module decoder (S1,S0,D3,D2,D1,D0); 
+   input S0,S1; 
+   output D0,D1,D2,D3; 
+ 
+   not n1 (notS0,S0),
+       n2 (notS1,S1);
+
+   and a0 (D0,notS1,notS0), 
+       a1 (D1,notS1,   S0), 
+       a2 (D2,   S1,notS0), 
+       a3 (D3,   S1,   S0); 
+endmodule 
+
+// D-flip flop
+module D_flip_flop(D,CLK,Q);
+
+	input D,CLK;
+	output Q;
+	wire CLK1,Y;
+	not not1 (CLK1,CLK);
+	
+	D_latch D1(D,CLK,Y),
+			D2(Y,CLK1,Q);
+			
+endmodule
+
+// D-latch
+module D_latch(D,C,Q);
+	input D,C;
+	output Q;
+	wire x,y,D1,Q1;
+	
+	nand nand1(x,D,C),
+		 nand2(y,D1,C),
+		 nand3(Q,x,Q1),
+		 nand4(Q1,y,Q);
+		 
+	not not1(D1,D);	
+endmodule
+
+// 16 bit D Flip Flop
+module D_16_Flip_flop(D,CLK,Q);
+	input [15:0] D;
+	input CLK;
+	output [15:0] Q;
+	
+	D_flip_flop f0(D[0], CLK, Q[0]),
+				f1(D[1], CLK, Q[1]),
+				f2(D[2], CLK, Q[2]),
+				f3(D[3], CLK, Q[3]),
+				f4(D[4], CLK, Q[4]),
+				f5(D[5], CLK, Q[5]),
+				f6(D[6], CLK, Q[6]),
+				f7(D[7], CLK, Q[7]),
+				f8(D[8], CLK, Q[8]),
+				f9(D[9], CLK, Q[9]),
+				f10(D[10], CLK, Q[10]),
+				f11(D[11], CLK, Q[11]),
+				f12(D[12], CLK, Q[12]),
+				f13(D[13], CLK, Q[13]),
+				f14(D[14], CLK, Q[14]),
+				f15(D[15], CLK, Q[15]);	
+endmodule
+
+
+// Alu/Main Control
+module mainctrl(Op,Control);
+    input [3:0] Op;
+    output reg [11:0] Control;
+	always @(Op) case (Op)
+  //DEX_RegDst,IDEX_ALUSrc,IDEX_MemtoReg,IDEX_RegWrite,IDEX_MemWrite,IDEX_Branch,IDEX_ALUOp
+  // branchop is 2 bits
+  //MemtoReg, MemWrite_ branchop_RegDst_ALUSrc,RegWrite_ALUctl
+    4'b0000: Control <= 12'b000_00_1_01_0010;  //add
+		4'b0001: Control <= 12'b000_00_101_0110;  //sub
+		4'b0010: Control <= 12'b000_00_101_0000;  //and
+		4'b0011: Control <= 12'b000_00_101_0001;  //or
+		4'b0100: Control <= 12'b000_00_101_1101;  //nor
+		4'b0101: Control <= 12'b000_00_011_1010;  //nand
+		4'b0110: Control <= 12'b000_00_101_0111;  //slt
+		4'b0111: Control <= 12'b000_00_011_0010;  //addi
+		4'b1000: Control <= 12'b010_00_0_11_0010;  //lw
+		4'b1001: Control <= 12'b001_00_0_10_0010;  //sw
+		4'b1010: Control <= 12'b000_10_0_00_0110;  //beq
+		4'b1011: Control <= 12'b000_01_0_01_1010;  //bne
+    4'b1100: Control <= 12'b100_00_0_00_0000;  //j
+
+	endcase
+endmodule
+
+//branch control
+module branchctrl(Branchop,zero,bout);
+    input [1:0] Branchop;
+    input zero;
+    output bout;
+    wire notzero,aa1,aa2;
+
+    not n1 (notzero,zero);
+    and a1 (aa1,notzero,Branchop[0]),
+        a2 (aa2,zero,Branchop[1]);
+    or o1 (bout,aa1,aa2);
+
+endmodule
+
+// jump control
+module jumpctrl(jumpop,pc, addr, pcout);
+
+    input [11:0]addr;
+    input  jumpop;
+    output [15:0]pcout;
+    input [15:0]pc;
+    //if jumpop is 1, then pcout = addr padded with 0s
+    //else if jumpop is 0, then pcout = to original pc
+    // output pc 
+    // input jumpop, addr
+    // output pcout
+    wire [15:0]pcout1,pcout2;
+    assign pcout1 = {4'b0000,addr};
+    assign pcout2 = pc;
+    assign pcout = jumpop ? pcout1 : pcout2;
+endmodule 
+
+ module CPU (clock,PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD);
+  input clock;
+  output [15:0] PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD;
+  reg [1:0]branchop;
+
+  initial begin 
+// Program: swap memory cells (if needed) and compute absolute value |5-7|=2
+   IMemory[0]  = 16'b1000_00_01_00000000;  // lw $1, 0($0)
+   IMemory[1]  = 16'b1000_00_10_00000100;  // lw $2, 4($0)
+   IMemory[2]  = 16'b0000000000000000;  // nop
+   IMemory[3]  = 16'b0000000000000000;  // nop
+   IMemory[4]  = 16'b0000000000000000;  // nop
+   IMemory[5]  = 16'b0110_01_10_11_000000;  // slt $3, $1, $2
+   IMemory[6]  = 16'b0000000000000000;  // nop
+   IMemory[7]  = 16'b0000000000000000;  // nop
+   IMemory[8]  = 16'b0000000000000000;  // nop
+   //IMemory[9]  = 32'h11600005;  // beq $t3, $0, IMemory[15]
+   IMemory[9]  = 16'b1010_11_00_00001111;  // beq $3, $0, IMemory[15]
+   IMemory[10] = 16'b0000000000000000;  // nop
+   IMemory[11] = 16'b0000000000000000;  // nop
+   IMemory[12] = 16'b0000000000000000;  // nop
+   //IMemory[13] = 32'hac090004;  // sw $t1, 4($0) 
+   //IMemory[14] = 32'hac0a0000;  // sw $t2, 0($0)
+   IMemory[13] = 16'b1001_00_01_00000100;  // sw $1, 4($0)
+   IMemory[14] = 16'b1001_00_10_00000000;  // sw $2, 0($0)
+   IMemory[15] = 16'b0000000000000000;  // nop
+   IMemory[16] = 16'b0000000000000000;  // nop
+   IMemory[17] = 16'b0000000000000000;  // nop
+   //IMemory[18] = 32'h8c090000;  // lw $t1, 0($0) 
+   //IMemory[19] = 32'h8c0a0004;  // lw $t2, 4($0)
+   IMemory[18] = 16'b1000_00_01_00000000;  // lw $1, 0($0)
+   IMemory[19] = 16'b1000_00_10_00000100;  // lw $2, 4($0)
+   IMemory[20] = 16'b0000000000000000;  // nop
+   IMemory[21] = 16'b0000000000000000;  // nop
+   IMemory[22] = 16'b0000000000000000;  // nop
+   //IMemory[23] = 32'h014a5027;  // nor $t2, $t2, $t2 (sub $3, $1, $2 in two's complement)
+   IMemory[23] = 16'b0100_10_10_10_000000;  // nor $2, $2, $2 (sub $3, $1, $2 in 2s complement)
+   IMemory[24] = 16'b0000000000000000;  // nop
+   IMemory[25] = 16'b0000000000000000;  // nop
+   IMemory[26] = 16'b0000000000000000;  // nop
+   //IMemory[27] = 32'h214a0001;  // addi $t2, $t2, 1 
+   IMemory[27] = 16'b0111_10_10_00000001;  // addi $2, $2, 1
+   IMemory[28] = 16'b0000000000000000;  // nop
+   IMemory[29] = 16'b0000000000000000;  // nop
+   IMemory[30] =16'b0000000000000000;  // nop
+   //IMemory[31] = 32'h012a5820;  // add $t3, $t1, $t2 
+   IMemory[31] = 16'b0000_01_10_11_000000;  // add $3, $1, $2
+ 
+// Data
+   DMemory[0] = 5; // switch the cells and see how the simulation output changes
+   DMemory[1] = 7; // (beq is taken if DMemory[0]=7; DMemory[1]=5, not taken otherwise)
+  end
+
+// Pipeline 
+// IF 
+   wire [15:0] PCplus4, NextPC;
+   reg[15:0] PC, IMemory[0:1023], IFID_IR, IFID_PCplus4;
+   ALU fetch (4'b0010,PC,16'b100,PCplus4,Unused1);
+   assign NextPC = (EXMEM_Branch && EXMEM_Zero) ? EXMEM_Target: PCplus4;
+// ID
+   wire [7:0] Control;
+   wire [10:0] control;
+   reg IDEX_RegWrite,IDEX_MemtoReg,  IDEX_MemWrite,
+       IDEX_ALUSrc,  IDEX_RegDst;
+   reg [1:0] IDEX_Branch;
+   reg [3:0] IDEX_ALUOp;
+   wire [15:0] RD1,RD2,SignExtend, WD;
+   reg [15:0] IDEX_PCplus4,IDEX_RD1,IDEX_RD2,IDEX_SignExt,IDEXE_IR;
+   reg [15:0] IDEX_IR; // For monitoring the pipeline
+   reg [4:0]  IDEX_rt,IDEX_rd;
+   reg MEMWB_RegWrite; // part of MEM stage, but declared here before use (to avoid error)
+   reg [1:0] MEMWB_rd; // part of MEM stage, but declared here before use (to avoid error)
+   //reg_file rf (IFID_IR[25:21],IFID_IR[20:16],MEMWB_rd,WD,MEMWB_RegWrite,RD1,RD2,clock);
+   reg_file rf (IFID_IR[11:10], IFID_IR[9:8], MEMWB_rd,WD,MEMWB_RegWrite,RD1,RD2,clock);
+
+   ////////////////////////////////////////////////
+   //MainControl MainCtr (IFID_IR[31:26],Control); 
+   mainctrl ainCtr (IFID_IR[15:12],{jumpop,control});
+   ////////////////////////////////////////////////
+   //assign SignExtend = {{16{IFID_IR[15]}},IFID_IR[15:0]}; 
+   assign SignExtend = {{8{IFID_IR[7]}},IFID_IR[7:0]}; // sign extension unit
+// EXE
+   reg EXMEM_RegWrite,EXMEM_MemtoReg,
+         EXMEM_MemWrite;
+  reg [1:0]EXMEM_Branch;
+   wire [15:0] Target;
+   reg EXMEM_Zero;
+   reg [15:0] EXMEM_Target,EXMEM_ALUOut,EXMEM_RD2;
+   reg [15:0] EXMEM_IR; // For monitoring the pipeline
+   reg [4:0] EXMEM_rd;
+   wire [15:0] B,ALUOut;
+   wire [3:0] ALUctl;
+   wire [4:0] WR;
+   ALU branch (4'b0010,IDEX_SignExt<<2,IDEX_PCplus4,Target,Unused2);
+   ALU ex (IDEX_ALUOp, IDEX_RD1, B, ALUOut, Zero);
+   //////////////////////////////////////////////////
+   //ALUControl ALUCtrl(IDEX_ALUOp, IDEX_SignExt[5:0], ALUctl); // ALU control unit
+    //////////////////////////////////////////////////
+   assign B  = (IDEX_ALUSrc) ? IDEX_SignExt: IDEX_RD2;        // ALUSrc Mux 
+   assign WR = (IDEX_RegDst) ? IDEX_rd: IDEX_rt;              // RegDst Mux
+   jumpctrl jumpct(jumpop,NextPC, IDEX_IR[11:0], pcchange);
+// MEM
+   reg MEMWB_MemtoReg;
+   reg [15:0] DMemory[0:1023],MEMWB_MemOut,MEMWB_ALUOut;
+   reg [15:0] MEMWB_IR; // For monitoring the pipeline
+   wire [15:0] MemOut;
+   assign MemOut = DMemory[EXMEM_ALUOut>>2];
+   always @(negedge clock) if (EXMEM_MemWrite) DMemory[EXMEM_ALUOut>>2] <= EXMEM_RD2;
+// WB
+   assign WD = (MEMWB_MemtoReg) ? MEMWB_MemOut: MEMWB_ALUOut; // MemtoReg Mux
+
+   initial begin
+    PC = 0;
+// Initialize pipeline registers
+    IDEX_RegWrite=0;IDEX_MemtoReg=0;IDEX_Branch=0;IDEX_MemWrite=0;IDEX_ALUSrc=0;IDEX_RegDst=0;IDEX_ALUOp=0;
+    IFID_IR=0;
+    EXMEM_RegWrite=0;EXMEM_MemtoReg=0;EXMEM_Branch=0;EXMEM_MemWrite=0;
+    EXMEM_Target=0;
+    MEMWB_RegWrite=0;MEMWB_MemtoReg=0;
+   end
+
+    wire [15:0]pcchange;
+// Running the pipeline
+   always @(negedge clock) begin 
+// IF
+
+    PC <= NextPC;
+    IFID_PCplus4 <= PCplus4;
+    IFID_IR <= IMemory[PC>>2];
+// ID
+    IDEX_IR <= IFID_IR; // For monitoring the pipeline
+    //{IDEX_RegDst,IDEX_ALUSrc,IDEX_MemtoReg,IDEX_RegWrite,IDEX_MemWrite,IDEX_Branch,IDEX_ALUOp} <= Control;  
+      //MemtoReg, MemWrite_ branchop_RegDst_ALUSrc,RegWrite_ALUctl
+    {IDEX_MemtoReg,IDEX_MemWrite,IDEX_Branch,IDEX_RegDst,IDEX_ALUSrc,IDEX_RegWrite,IDEX_ALUOp} <= control;
+    IDEX_PCplus4 <= IFID_PCplus4;
+    IDEX_RD1 <= RD1; 
+    IDEX_RD2 <= RD2;
+    IDEX_SignExt <= SignExtend;
+    IDEX_rt <= IFID_IR[9:8];
+    IDEX_rd <= IFID_IR[7:6];
+// EXE
+    EXMEM_IR <= IDEX_IR; // For monitoring the pipeline
+    EXMEM_RegWrite <= IDEX_RegWrite;
+    EXMEM_MemtoReg <= IDEX_MemtoReg;
+    EXMEM_Branch   <= IDEX_Branch;
+    EXMEM_MemWrite <= IDEX_MemWrite;
+    EXMEM_Target <= Target;
+    EXMEM_Zero <= Zero;
+    EXMEM_ALUOut <= ALUOut;
+    EXMEM_RD2 <= IDEX_RD2;
+    EXMEM_rd <= WR;
+// MEM
+    MEMWB_IR <= EXMEM_IR; // For monitoring the pipeline
+    MEMWB_RegWrite <= EXMEM_RegWrite;
+    MEMWB_MemtoReg <= EXMEM_MemtoReg;
+    MEMWB_MemOut <= MemOut;
+    MEMWB_ALUOut <= EXMEM_ALUOut;
+    MEMWB_rd <= EXMEM_rd;
+// WB
+// Register write happens on neg edge of the clock (if MEMWB_RegWrite is asserted)
+  end
+endmodule
+
+// Test module
+module test ();
+  reg clock;
+  wire signed [15:0] PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD;
+  CPU test_cpu(clock,PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD);
+  always #1 clock = ~clock;
+  initial begin
+    $display ("PC   IFID_IR  IDEX_IR  EXMEM_IR MEMWB_IR  WD");
+    $monitor ("%3d  %b %b %b %b %2d",PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD);
+    clock = 1;
+    #69 $finish;
+  end
+endmodule
+
+/* Output:
+PC   IFID_IR  IDEX_IR  EXMEM_IR MEMWB_IR  WD
+  0  00000000 xxxxxxxx xxxxxxxx xxxxxxxx  x
+  4  8c090000 00000000 xxxxxxxx xxxxxxxx  x
+  8  8c0a0004 8c090000 00000000 xxxxxxxx  x
+ 12  00000000 8c0a0004 8c090000 00000000  0
+ 16  00000000 00000000 8c0a0004 8c090000  5
+ 20  00000000 00000000 00000000 8c0a0004  7
+ 24  012a582a 00000000 00000000 00000000  0
+ 28  00000000 012a582a 00000000 00000000  0
+ 32  00000000 00000000 012a582a 00000000  0
+ 36  00000000 00000000 00000000 012a582a  1
+ 40  11600005 00000000 00000000 00000000  0
+ 44  00000000 11600005 00000000 00000000  0
+ 48  00000000 00000000 11600005 00000000  0
+ 52  00000000 00000000 00000000 11600005  1
+ 56  ac090004 00000000 00000000 00000000  0
+ 60  ac0a0000 ac090004 00000000 00000000  0
+ 64  00000000 ac0a0000 ac090004 00000000  0
+ 68  00000000 00000000 ac0a0000 ac090004  4
+ 72  00000000 00000000 00000000 ac0a0000  0
+ 76  8c090000 00000000 00000000 00000000  0
+ 80  8c0a0004 8c090000 00000000 00000000  0
+ 84  00000000 8c0a0004 8c090000 00000000  0
+ 88  00000000 00000000 8c0a0004 8c090000  7
+ 92  00000000 00000000 00000000 8c0a0004  5
+ 96  014a5027 00000000 00000000 00000000  0
+100  00000000 014a5027 00000000 00000000  0
+104  00000000 00000000 014a5027 00000000  0
+108  00000000 00000000 00000000 014a5027 -6
+112  214a0001 00000000 00000000 00000000 -1
+116  00000000 214a0001 00000000 00000000 -1
+120  00000000 00000000 214a0001 00000000 -1
+124  00000000 00000000 00000000 214a0001 -5
+128  012a5820 00000000 00000000 00000000  0
+132  xxxxxxxx 012a5820 00000000 00000000  0
+136  xxxxxxxx xxxxxxxx 012a5820 00000000  0
+140  xxxxxxxx xxxxxxxx xxxxxxxx 012a5820  2
+*/

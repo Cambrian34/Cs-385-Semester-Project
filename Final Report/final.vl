@@ -311,7 +311,7 @@ module mainctrl(Op,Control);
 	always @(Op) case (Op)
   //DEX_RegDst,IDEX_ALUSrc,IDEX_MemtoReg,IDEX_RegWrite,IDEX_MemWrite,IDEX_Branch,IDEX_ALUOp
   // branchop is 2 bits
-  //MemtoReg, MemWrite_ branchop_RegDst_ALUSrc,RegWrite_ALUctl
+  //j ,MemtoReg, MemWrite_ branchop_RegDst_ALUSrc,RegWrite_ALUctl
     4'b0000: Control <= 12'b000_00_1_01_0010;  //add
 		4'b0001: Control <= 12'b000_00_101_0110;  //sub
 		4'b0010: Control <= 12'b000_00_101_0000;  //and
@@ -322,9 +322,9 @@ module mainctrl(Op,Control);
 		4'b0111: Control <= 12'b000_00_011_0010;  //addi
 		4'b1000: Control <= 12'b010_00_0_11_0010;  //lw
 		4'b1001: Control <= 12'b001_00_0_10_0010;  //sw
-		4'b1010: Control <= 12'b000_10_0_00_0110;  //beq
-		4'b1011: Control <= 12'b000_01_0_01_1010;  //bne
-    4'b1100: Control <= 12'b100_00_0_00_0000;  //j
+		4'b1010: Control <= 12'b000_10_0_00_0101;  //beq
+		4'b1011: Control <= 12'b000_10_0_01_1010;  //bne
+    4'b1100: Control <= 12'b100_00_0_11_0010;  //j
 
 	endcase
 endmodule
@@ -361,15 +361,24 @@ module jumpctrl(jumpop,pc, addr, pcout);
     assign pcout = jumpop ? pcout1 : pcout2;
 endmodule 
 
- module CPU (clock,PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD);
+// jump control v2
+module Jumpctr (PCplus2, IDEX_IR, Jump_Addr);
+  input [15:0] PCplus2;
+  input [15:0] IDEX_IR;
+  output [15:0] Jump_Addr;
+  assign Jump_Addr = {PCplus2[15:12], IDEX_IR[11:0]};
+endmodule
+
+ module CPU (clock,PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD,BranchOut, testtarget);
   input clock;
-  output [15:0] PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD;
+  output [15:0] PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD,testtarget;
+  output BranchOut;
   reg [1:0]branchop;
 
   initial begin 
 // Program: swap memory cells (if needed) and compute absolute value |5-7|=2
    IMemory[0]  = 16'b1000_00_01_00000000;  // lw $1, 0($0)
-   IMemory[1]  = 16'b1000_00_10_00000100;  // lw $2, 4($0)
+   IMemory[1]  = 16'b1000_00_10_00000100;  // lw $2, 2($0)
    IMemory[2]  = 16'b0000000000000000;  // nop
    IMemory[3]  = 16'b0000000000000000;  // nop
    IMemory[4]  = 16'b0000000000000000;  // nop
@@ -408,20 +417,35 @@ endmodule
    IMemory[30] =16'b0000000000000000;  // nop
    //IMemory[31] = 32'h012a5820;  // add $t3, $t1, $t2 
    IMemory[31] = 16'b0000_01_10_11_000000;  // add $3, $1, $2
+   IMemory[32] = 16'b0000000000000000;  // nop
+   IMemory[33] = 16'b0000000000000000;  // nop
+   IMemory[34] = 16'b1100000000000000;  // j
+  
  
 // Data
    DMemory[0] = 5; // switch the cells and see how the simulation output changes
    DMemory[1] = 7; // (beq is taken if DMemory[0]=7; DMemory[1]=5, not taken otherwise)
   end
-
+// change pcplus4 to 2
 // Pipeline 
 // IF 
+   wire [15:0]Jump_Address;
    wire [15:0] PCplus4, NextPC;
    reg[15:0] PC, IMemory[0:1023], IFID_IR, IFID_PCplus4;
    ALU fetch (4'b0010,PC,16'b100,PCplus4,Unused1);
-   assign NextPC = (EXMEM_Branch && EXMEM_Zero) ? EXMEM_Target: PCplus4;
+  //assign NextPC = (EXMEM_Branch && EXMEM_Zero) ? EXMEM_Target: PCplus4;
+    
+  branchctrl branchCtr (EXMEM_Branch,EXMEM_Zero,BranchOut);
+  mux16bit2x1 muxBranch (PCplus4,EXMEM_Target, BranchOut, testtarget);
+
+  Jumpctr jum (PCplus4,IDEX_IR,Jump_Address);
+
+  mux16bit2x1 muxJump (testtarget,Jump_Address, jumpop, pcchange);
+  
+  //jumpctrl jumpct(jumpop, NextPC, IDEX_IR[11:0], pcchange);
+
 // ID
-   wire [7:0] Control;
+  // wire [7:0] Control;
    wire [10:0] control;
    reg IDEX_RegWrite,IDEX_MemtoReg,  IDEX_MemWrite,
        IDEX_ALUSrc,  IDEX_RegDst;
@@ -430,7 +454,7 @@ endmodule
    wire [15:0] RD1,RD2,SignExtend, WD;
    reg [15:0] IDEX_PCplus4,IDEX_RD1,IDEX_RD2,IDEX_SignExt,IDEXE_IR;
    reg [15:0] IDEX_IR; // For monitoring the pipeline
-   reg [4:0]  IDEX_rt,IDEX_rd;
+   reg [1:0]  IDEX_rt,IDEX_rd;
    reg MEMWB_RegWrite; // part of MEM stage, but declared here before use (to avoid error)
    reg [1:0] MEMWB_rd; // part of MEM stage, but declared here before use (to avoid error)
    //reg_file rf (IFID_IR[25:21],IFID_IR[20:16],MEMWB_rd,WD,MEMWB_RegWrite,RD1,RD2,clock);
@@ -445,7 +469,7 @@ endmodule
 // EXE
    reg EXMEM_RegWrite,EXMEM_MemtoReg,
          EXMEM_MemWrite;
-  reg [1:0]EXMEM_Branch;
+   reg [1:0]EXMEM_Branch;
    wire [15:0] Target;
    reg EXMEM_Zero;
    reg [15:0] EXMEM_Target,EXMEM_ALUOut,EXMEM_RD2;
@@ -453,15 +477,20 @@ endmodule
    reg [4:0] EXMEM_rd;
    wire [15:0] B,ALUOut;
    wire [3:0] ALUctl;
-   wire [4:0] WR;
+   wire [1:0] WR;
    ALU branch (4'b0010,IDEX_SignExt<<2,IDEX_PCplus4,Target,Unused2);
    ALU ex (IDEX_ALUOp, IDEX_RD1, B, ALUOut, Zero);
    //////////////////////////////////////////////////
    //ALUControl ALUCtrl(IDEX_ALUOp, IDEX_SignExt[5:0], ALUctl); // ALU control unit
     //////////////////////////////////////////////////
-   assign B  = (IDEX_ALUSrc) ? IDEX_SignExt: IDEX_RD2;        // ALUSrc Mux 
-   assign WR = (IDEX_RegDst) ? IDEX_rd: IDEX_rt;              // RegDst Mux
-   jumpctrl jumpct(jumpop,NextPC, IDEX_IR[11:0], pcchange);
+   //assign B  = (IDEX_ALUSrc) ? IDEX_SignExt: IDEX_RD2;        // ALUSrc Mux 
+   //assign WR = (IDEX_RegDst) ? IDEX_rd: IDEX_rt;              // RegDst Mux
+  //assign wr
+   mux2bit2x1 mx4( IDEX_rt,IDEX_rd,IDEX_RegDst,WR);
+   //assign B
+   mux16bit2x1 mx2(IDEX_RD2,IDEX_SignExt,IDEX_ALUSrc,B);
+
+  
 // MEM
    reg MEMWB_MemtoReg;
    reg [15:0] DMemory[0:1023],MEMWB_MemOut,MEMWB_ALUOut;
@@ -470,7 +499,9 @@ endmodule
    assign MemOut = DMemory[EXMEM_ALUOut>>2];
    always @(negedge clock) if (EXMEM_MemWrite) DMemory[EXMEM_ALUOut>>2] <= EXMEM_RD2;
 // WB
-   assign WD = (MEMWB_MemtoReg) ? MEMWB_MemOut: MEMWB_ALUOut; // MemtoReg Mux
+  // assign WD = (MEMWB_MemtoReg) ? MEMWB_MemOut: MEMWB_ALUOut; // MemtoReg Mux
+   //assign WD
+  mux16bit2x1 muxWD (MEMWB_ALUOut, MEMWB_MemOut, MEMWB_MemtoReg, WD);
 
    initial begin
     PC = 0;
@@ -487,7 +518,8 @@ endmodule
    always @(negedge clock) begin 
 // IF
 
-    PC <= NextPC;
+    //PC <= NextPC;
+    PC <= pcchange;
     IFID_PCplus4 <= PCplus4;
     IFID_IR <= IMemory[PC>>2];
 // ID
@@ -501,6 +533,7 @@ endmodule
     IDEX_SignExt <= SignExtend;
     IDEX_rt <= IFID_IR[9:8];
     IDEX_rd <= IFID_IR[7:6];
+
 // EXE
     EXMEM_IR <= IDEX_IR; // For monitoring the pipeline
     EXMEM_RegWrite <= IDEX_RegWrite;
@@ -527,14 +560,16 @@ endmodule
 // Test module
 module test ();
   reg clock;
-  wire signed [15:0] PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD;
-  CPU test_cpu(clock,PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD);
+  wire signed [15:0] PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD, testtarget;
+  wire signed branchop;
+  CPU test_cpu(clock,PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD,branchop, testtarget);
+  
   always #1 clock = ~clock;
   initial begin
     $display ("PC   IFID_IR  IDEX_IR  EXMEM_IR MEMWB_IR  WD");
-    $monitor ("%3d  %b %b %b %b %2d",PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD);
+    $monitor ("%3d  %b %b %b %b %2d %b %2d",PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD , branchop, testtarget);
     clock = 1;
-    #69 $finish;
+    #100 $finish;
   end
 endmodule
 

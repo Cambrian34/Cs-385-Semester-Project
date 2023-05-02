@@ -322,9 +322,9 @@ module mainctrl(Op,Control);
 		4'b0111: Control <= 12'b000_00_011_0010;  //addi
 		4'b1000: Control <= 12'b010_00_0_11_0010;  //lw
 		4'b1001: Control <= 12'b001_00_0_10_0010;  //sw
-		4'b1010: Control <= 12'b000_10_0_00_0101;  //beq
-		4'b1011: Control <= 12'b000_10_0_01_1010;  //bne
-    4'b1100: Control <= 12'b100_00_0_11_0010;  //j
+		4'b1010: Control <= 12'b000_10_0_00_0110;  //beq
+		4'b1011: Control <= 12'b000_01_0_01_1010;  //bne
+    4'b1100: Control <= 12'b100_00_0_00_0000;  //j
 
 	endcase
 endmodule
@@ -369,16 +369,16 @@ module Jumpctr (PCplus2, IDEX_IR, Jump_Addr);
   assign Jump_Addr = {PCplus2[15:12], IDEX_IR[11:0]};
 endmodule
 
- module CPU (clock,PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD,BranchOut, testtarget);
+ module CPU (clock,PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD,BranchOut, pcchange);
   input clock;
-  output [15:0] PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD,testtarget;
+  output [15:0] PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD,pcchange;
   output BranchOut;
   reg [1:0]branchop;
 
   initial begin 
 // Program: swap memory cells (if needed) and compute absolute value |5-7|=2
    IMemory[0]  = 16'b1000_00_01_00000000;  // lw $1, 0($0)
-   IMemory[1]  = 16'b1000_00_10_00000100;  // lw $2, 2($0)
+   IMemory[1]  = 16'b1000_00_10_00000010;  // lw $2, 2($0)
    IMemory[2]  = 16'b0000000000000000;  // nop
    IMemory[3]  = 16'b0000000000000000;  // nop
    IMemory[4]  = 16'b0000000000000000;  // nop
@@ -393,7 +393,7 @@ endmodule
    IMemory[12] = 16'b0000000000000000;  // nop
    //IMemory[13] = 32'hac090004;  // sw $t1, 4($0) 
    //IMemory[14] = 32'hac0a0000;  // sw $t2, 0($0)
-   IMemory[13] = 16'b1001_00_01_00000100;  // sw $1, 4($0)
+   IMemory[13] = 16'b1001_00_01_00000010;  // sw $1, 4($0)
    IMemory[14] = 16'b1001_00_10_00000000;  // sw $2, 0($0)
    IMemory[15] = 16'b0000000000000000;  // nop
    IMemory[16] = 16'b0000000000000000;  // nop
@@ -401,12 +401,13 @@ endmodule
    //IMemory[18] = 32'h8c090000;  // lw $t1, 0($0) 
    //IMemory[19] = 32'h8c0a0004;  // lw $t2, 4($0)
    IMemory[18] = 16'b1000_00_01_00000000;  // lw $1, 0($0)
-   IMemory[19] = 16'b1000_00_10_00000100;  // lw $2, 4($0)
+   IMemory[19] = 16'b1000_00_10_00000010;  // lw $2, 4($0)
    IMemory[20] = 16'b0000000000000000;  // nop
    IMemory[21] = 16'b0000000000000000;  // nop
    IMemory[22] = 16'b0000000000000000;  // nop
    //IMemory[23] = 32'h014a5027;  // nor $t2, $t2, $t2 (sub $3, $1, $2 in two's complement)
    IMemory[23] = 16'b0100_10_10_10_000000;  // nor $2, $2, $2 (sub $3, $1, $2 in 2s complement)
+   //IMemory[23] = 16'b0001_01_10_11_000000;  // nor $2, $2, $2 (sub $3, $1, $2 in 2s complement)
    IMemory[24] = 16'b0000000000000000;  // nop
    IMemory[25] = 16'b0000000000000000;  // nop
    IMemory[26] = 16'b0000000000000000;  // nop
@@ -419,7 +420,8 @@ endmodule
    IMemory[31] = 16'b0000_01_10_11_000000;  // add $3, $1, $2
    IMemory[32] = 16'b0000000000000000;  // nop
    IMemory[33] = 16'b0000000000000000;  // nop
-   IMemory[34] = 16'b1100000000000000;  // j
+   //IMemory[34] = 16'b0000000000000000;  // nop
+   IMemory[34] = 16'b1100000000111110 ;  // j to pc 62
   
  
 // Data
@@ -430,9 +432,9 @@ endmodule
 // Pipeline 
 // IF 
    wire [15:0]Jump_Address;
-   wire [15:0] PCplus4, NextPC;
+   wire [15:0] PCplus4, NextPC,testtarget;
    reg[15:0] PC, IMemory[0:1023], IFID_IR, IFID_PCplus4;
-   ALU fetch (4'b0010,PC,16'b100,PCplus4,Unused1);
+   ALU fetch (4'b0010,PC,16'b0010,PCplus4,Unused1);
   //assign NextPC = (EXMEM_Branch && EXMEM_Zero) ? EXMEM_Target: PCplus4;
     
   branchctrl branchCtr (EXMEM_Branch,EXMEM_Zero,BranchOut);
@@ -442,7 +444,7 @@ endmodule
 
   mux16bit2x1 muxJump (testtarget,Jump_Address, jumpop, pcchange);
   
-  //jumpctrl jumpct(jumpop, NextPC, IDEX_IR[11:0], pcchange);
+  //jumpctrl jumpct(jumpop,testtarget, IDEX_IR[11:0], pcchange);
 
 // ID
   // wire [7:0] Control;
@@ -478,7 +480,7 @@ endmodule
    wire [15:0] B,ALUOut;
    wire [3:0] ALUctl;
    wire [1:0] WR;
-   ALU branch (4'b0010,IDEX_SignExt<<2,IDEX_PCplus4,Target,Unused2);
+   ALU branch (4'b0010,IDEX_SignExt<<1,IDEX_PCplus4,Target,Unused2);
    ALU ex (IDEX_ALUOp, IDEX_RD1, B, ALUOut, Zero);
    //////////////////////////////////////////////////
    //ALUControl ALUCtrl(IDEX_ALUOp, IDEX_SignExt[5:0], ALUctl); // ALU control unit
@@ -496,8 +498,8 @@ endmodule
    reg [15:0] DMemory[0:1023],MEMWB_MemOut,MEMWB_ALUOut;
    reg [15:0] MEMWB_IR; // For monitoring the pipeline
    wire [15:0] MemOut;
-   assign MemOut = DMemory[EXMEM_ALUOut>>2];
-   always @(negedge clock) if (EXMEM_MemWrite) DMemory[EXMEM_ALUOut>>2] <= EXMEM_RD2;
+   assign MemOut = DMemory[EXMEM_ALUOut>>1];
+   always @(negedge clock) if (EXMEM_MemWrite) DMemory[EXMEM_ALUOut>>1] <= EXMEM_RD2;
 // WB
   // assign WD = (MEMWB_MemtoReg) ? MEMWB_MemOut: MEMWB_ALUOut; // MemtoReg Mux
    //assign WD
@@ -521,7 +523,7 @@ endmodule
     //PC <= NextPC;
     PC <= pcchange;
     IFID_PCplus4 <= PCplus4;
-    IFID_IR <= IMemory[PC>>2];
+    IFID_IR <= IMemory[PC>>1];
 // ID
     IDEX_IR <= IFID_IR; // For monitoring the pipeline
     //{IDEX_RegDst,IDEX_ALUSrc,IDEX_MemtoReg,IDEX_RegWrite,IDEX_MemWrite,IDEX_Branch,IDEX_ALUOp} <= Control;  
@@ -567,7 +569,7 @@ module test ();
   always #1 clock = ~clock;
   initial begin
     $display ("PC   IFID_IR  IDEX_IR  EXMEM_IR MEMWB_IR  WD");
-    $monitor ("%3d  %b %b %b %b %2d %b %2d",PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD , branchop, testtarget);
+    $monitor ("%3d  %b %b %b %b %2d %b %2d ",PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD , branchop, testtarget);
     clock = 1;
     #100 $finish;
   end

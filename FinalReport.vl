@@ -105,7 +105,7 @@ module CPU (clock,PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD);
  
 // Data
    DMemory[0] = 5; // switch the cells and see how the simulation output changes
-   DMemory[1] = 7; // (beq is taken if DMemory[0]=7; DMemory[1]=5, not taken otherwise)
+   DMemory[1] = 5; // (beq is taken if DMemory[0]=7; DMemory[1]=5, not taken otherwise)
   end
 
 // Pipeline 

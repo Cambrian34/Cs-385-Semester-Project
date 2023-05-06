@@ -387,7 +387,8 @@ endmodule
    IMemory[7]  = 16'b0000000000000000;  // nop
    IMemory[8]  = 16'b0000000000000000;  // nop
    //IMemory[9]  = 32'h11600005;  // beq $t3, $0, IMemory[15]
-   IMemory[9]  = 16'b1010_11_00_00001111;  // beq $3, $0, IMemory[15]
+   IMemory[9]  = 16'b1010_11_00_00000101;  // beq $3, $0, IMemory[15]
+   // 5 in 
    IMemory[10] = 16'b0000000000000000;  // nop
    IMemory[11] = 16'b0000000000000000;  // nop
    IMemory[12] = 16'b0000000000000000;  // nop
@@ -418,14 +419,16 @@ endmodule
    IMemory[30] =16'b0000000000000000;  // nop
    //IMemory[31] = 32'h012a5820;  // add $t3, $t1, $t2 
    IMemory[31] = 16'b0000_01_10_11_000000;  // add $3, $1, $2
-   IMemory[32] = 16'b1100000000011110 ;  // j to pc 
+   IMemory[32] = 16'b1100000000001010 ;  // j to pc 
    // branch delay slot
    IMemory[33] = 16'b0000000000000000;  // nop
+   
   
  
 // Data
    DMemory[0] = 5; // switch the cells and see how the simulation output changes
    DMemory[1] = 7; // (beq is taken if DMemory[0]=7; DMemory[1]=5, not taken otherwise)
+   //DMemory[1] = 5; // (beq is taken if DMemory[0]=7; DMemory[1]=5, not taken otherwise)
   end
 // change pcplus4 to 2// finished
 // Pipeline 
@@ -435,13 +438,6 @@ endmodule
    reg[15:0] PC, IMemory[0:1023], IFID_IR, IFID_PCplus4;
    ALU fetch (4'b0010,PC,16'b0010,PCplus4,Unused1);
   //assign NextPC = (EXMEM_Branch && EXMEM_Zero) ? EXMEM_Target: PCplus4;
-    
-  branchctrl branchCtr (EXMEM_Branch,EXMEM_Zero,BranchOut);
-  mux16bit2x1 muxBranch (PCplus4,EXMEM_Target, BranchOut, testtarget);
-
-  Jumpctr jum (IFID_PCplus4,IFID_IR,Jump_Address);
-
-  mux16bit2x1 muxJump (testtarget,Jump_Address, jumpop, NextPC);
   
   //jumpctrl jumpct(jumpop,testtarget, IDEX_IR[11:0], NextPC);
 
@@ -491,6 +487,13 @@ endmodule
    //assign B
    mux16bit2x1 mx2(IDEX_RD2,IDEX_SignExt,IDEX_ALUSrc,B);
 
+
+  branchctrl branchCtr (EXMEM_Branch,EXMEM_Zero,BranchOut);
+  mux16bit2x1 muxBranch (PCplus4,EXMEM_Target, BranchOut, testtarget);
+
+  Jumpctr jum (IFID_PCplus4,IFID_IR,Jump_Address);
+
+  mux16bit2x1 muxJump (testtarget,Jump_Address, jumpop, NextPC);
   
 // MEM
    reg MEMWB_MemtoReg;
@@ -568,7 +571,7 @@ module test ();
   always #1 clock = ~clock;
   initial begin
     $display ("PC   IFID_IR  IDEX_IR  EXMEM_IR MEMWB_IR  WD");
-    $monitor ("%3d  %b %b %b %b %2d %b %2d ",PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD , branchop, testtarget);
+    $monitor ("%3d  %h %h %h %b %2d %b %2d ",PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD , branchop, testtarget);
     clock = 1;
     #100 $finish;
   end

@@ -369,9 +369,9 @@ module Jumpctr (PCplus2, IDEX_IR, Jump_Addr);
   assign Jump_Addr = {PCplus2[15:12], IDEX_IR[11:0]};
 endmodule
 
- module CPU (clock,PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD,BranchOut, pcchange);
+ module CPU (clock,PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD,BranchOut, NextPC);
   input clock;
-  output [15:0] PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD,pcchange;
+  output [15:0] PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD,NextPC;
   output BranchOut;
   reg [1:0]branchop;
 
@@ -418,17 +418,16 @@ endmodule
    IMemory[30] =16'b0000000000000000;  // nop
    //IMemory[31] = 32'h012a5820;  // add $t3, $t1, $t2 
    IMemory[31] = 16'b0000_01_10_11_000000;  // add $3, $1, $2
-   IMemory[32] = 16'b0000000000000000;  // nop
+   IMemory[32] = 16'b1100000000011110 ;  // j to pc 
+   // branch delay slot
    IMemory[33] = 16'b0000000000000000;  // nop
-   //IMemory[34] = 16'b0000000000000000;  // nop
-   IMemory[34] = 16'b1100000000111110 ;  // j to pc 62
   
  
 // Data
    DMemory[0] = 5; // switch the cells and see how the simulation output changes
    DMemory[1] = 7; // (beq is taken if DMemory[0]=7; DMemory[1]=5, not taken otherwise)
   end
-// change pcplus4 to 2
+// change pcplus4 to 2// finished
 // Pipeline 
 // IF 
    wire [15:0]Jump_Address;
@@ -440,11 +439,11 @@ endmodule
   branchctrl branchCtr (EXMEM_Branch,EXMEM_Zero,BranchOut);
   mux16bit2x1 muxBranch (PCplus4,EXMEM_Target, BranchOut, testtarget);
 
-  Jumpctr jum (PCplus4,IDEX_IR,Jump_Address);
+  Jumpctr jum (IFID_PCplus4,IFID_IR,Jump_Address);
 
-  mux16bit2x1 muxJump (testtarget,Jump_Address, jumpop, pcchange);
+  mux16bit2x1 muxJump (testtarget,Jump_Address, jumpop, NextPC);
   
-  //jumpctrl jumpct(jumpop,testtarget, IDEX_IR[11:0], pcchange);
+  //jumpctrl jumpct(jumpop,testtarget, IDEX_IR[11:0], NextPC);
 
 // ID
   // wire [7:0] Control;
@@ -520,8 +519,8 @@ endmodule
    always @(negedge clock) begin 
 // IF
 
-    //PC <= NextPC;
-    PC <= pcchange;
+    PC <= NextPC;
+    //PC <= pcchange;
     IFID_PCplus4 <= PCplus4;
     IFID_IR <= IMemory[PC>>1];
 // ID

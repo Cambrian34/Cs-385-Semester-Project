@@ -386,40 +386,30 @@ endmodule
    IMemory[6]  = 16'b0000000000000000;  // nop
    IMemory[7]  = 16'b0000000000000000;  // nop
    IMemory[8]  = 16'b0000000000000000;  // nop
-   //IMemory[9]  = 32'h11600005;  // beq $t3, $0, IMemory[15]
    IMemory[9]  = 16'b1010_11_00_00000101;  // beq $3, $0, IMemory[15]
-   // 5 in 
    IMemory[10] = 16'b0000000000000000;  // nop
    IMemory[11] = 16'b0000000000000000;  // nop
    IMemory[12] = 16'b0000000000000000;  // nop
-   //IMemory[13] = 32'hac090004;  // sw $t1, 4($0) 
-   //IMemory[14] = 32'hac0a0000;  // sw $t2, 0($0)
-   IMemory[13] = 16'b1001_00_01_00000010;  // sw $1, 4($0)
+   IMemory[13] = 16'b1001_00_01_00000010;  // sw $1, 2($0)
    IMemory[14] = 16'b1001_00_10_00000000;  // sw $2, 0($0)
    IMemory[15] = 16'b0000000000000000;  // nop
    IMemory[16] = 16'b0000000000000000;  // nop
    IMemory[17] = 16'b0000000000000000;  // nop
-   //IMemory[18] = 32'h8c090000;  // lw $t1, 0($0) 
-   //IMemory[19] = 32'h8c0a0004;  // lw $t2, 4($0)
    IMemory[18] = 16'b1000_00_01_00000000;  // lw $1, 0($0)
-   IMemory[19] = 16'b1000_00_10_00000010;  // lw $2, 4($0)
+   IMemory[19] = 16'b1000_00_10_00000010;  // lw $2, 2($0)
    IMemory[20] = 16'b0000000000000000;  // nop
    IMemory[21] = 16'b0000000000000000;  // nop
    IMemory[22] = 16'b0000000000000000;  // nop
-   //IMemory[23] = 32'h014a5027;  // nor $t2, $t2, $t2 (sub $3, $1, $2 in two's complement)
    IMemory[23] = 16'b0100_10_10_10_000000;  // nor $2, $2, $2 (sub $3, $1, $2 in 2s complement)
-   //IMemory[23] = 16'b0001_01_10_11_000000;  // nor $2, $2, $2 (sub $3, $1, $2 in 2s complement)
    IMemory[24] = 16'b0000000000000000;  // nop
    IMemory[25] = 16'b0000000000000000;  // nop
    IMemory[26] = 16'b0000000000000000;  // nop
-   //IMemory[27] = 32'h214a0001;  // addi $t2, $t2, 1 
    IMemory[27] = 16'b0111_10_10_00000001;  // addi $2, $2, 1
    IMemory[28] = 16'b0000000000000000;  // nop
    IMemory[29] = 16'b0000000000000000;  // nop
    IMemory[30] =16'b0000000000000000;  // nop
-   //IMemory[31] = 32'h012a5820;  // add $t3, $t1, $t2 
    IMemory[31] = 16'b0000_01_10_11_000000;  // add $3, $1, $2
-   IMemory[32] = 16'b1100000000001010 ;  // j to pc 
+   IMemory[32] = 16'b1100000000001010 ;  // j to pc 10
    // branch delay slot
    IMemory[33] = 16'b0000000000000000;  // nop
    
@@ -427,19 +417,22 @@ endmodule
  
 // Data
    DMemory[0] = 5; // switch the cells and see how the simulation output changes
-   DMemory[1] = 7; // (beq is taken if DMemory[0]=7; DMemory[1]=5, not taken otherwise)
-   //DMemory[1] = 5; // (beq is taken if DMemory[0]=7; DMemory[1]=5, not taken otherwise)
+   //DMemory[1] = 7; // (beq is taken if DMemory[0]=7; DMemory[1]=5, not taken otherwise)
+   DMemory[1] = 5; // (beq is taken if DMemory[0]=7; DMemory[1]=5, not taken otherwise)
   end
-// change pcplus4 to 2// finished
+
 // Pipeline 
 // IF 
    wire [15:0]Jump_Address;
-   wire [15:0] PCplus4, NextPC,testtarget;
-   reg[15:0] PC, IMemory[0:1023], IFID_IR, IFID_PCplus4;
-   ALU fetch (4'b0010,PC,16'b0010,PCplus4,Unused1);
-  //assign NextPC = (EXMEM_Branch && EXMEM_Zero) ? EXMEM_Target: PCplus4;
+   wire [15:0] PCplus2, NextPC,testtarget;
+   reg[15:0] PC, IMemory[0:1023], IFID_IR, IFID_PCplus2;
+   ALU fetch (4'b0010,PC,16'b0010,PCplus2,Unused1);
+
+   // jump control and assign nextpc
+  Jumpctr jum (IFID_PCplus2,IFID_IR,Jump_Address);
   
-  //jumpctrl jumpct(jumpop,testtarget, IDEX_IR[11:0], NextPC);
+  mux16bit2x1 muxJump (testtarget,Jump_Address, jumpop, NextPC);
+  
 
 // ID
   // wire [7:0] Control;
@@ -449,19 +442,13 @@ endmodule
    reg [1:0] IDEX_Branch;
    reg [3:0] IDEX_ALUOp;
    wire [15:0] RD1,RD2,SignExtend, WD;
-   reg [15:0] IDEX_PCplus4,IDEX_RD1,IDEX_RD2,IDEX_SignExt,IDEXE_IR;
+   reg [15:0] IDEX_PCplus2,IDEX_RD1,IDEX_RD2,IDEX_SignExt,IDEXE_IR;
    reg [15:0] IDEX_IR; // For monitoring the pipeline
    reg [1:0]  IDEX_rt,IDEX_rd;
    reg MEMWB_RegWrite; // part of MEM stage, but declared here before use (to avoid error)
    reg [1:0] MEMWB_rd; // part of MEM stage, but declared here before use (to avoid error)
-   //reg_file rf (IFID_IR[25:21],IFID_IR[20:16],MEMWB_rd,WD,MEMWB_RegWrite,RD1,RD2,clock);
    reg_file rf (IFID_IR[11:10], IFID_IR[9:8], MEMWB_rd,WD,MEMWB_RegWrite,RD1,RD2,clock);
-
-   ////////////////////////////////////////////////
-   //MainControl MainCtr (IFID_IR[31:26],Control); 
    mainctrl ainCtr (IFID_IR[15:12],{jumpop,control});
-   ////////////////////////////////////////////////
-   //assign SignExtend = {{16{IFID_IR[15]}},IFID_IR[15:0]}; 
    assign SignExtend = {{8{IFID_IR[7]}},IFID_IR[7:0]}; // sign extension unit
 // EXE
    reg EXMEM_RegWrite,EXMEM_MemtoReg,
@@ -475,25 +462,19 @@ endmodule
    wire [15:0] B,ALUOut;
    wire [3:0] ALUctl;
    wire [1:0] WR;
-   ALU branch (4'b0010,IDEX_SignExt<<1,IDEX_PCplus4,Target,Unused2);
+   ALU branch (4'b0010,IDEX_SignExt<<1,IDEX_PCplus2,Target,Unused2);
    ALU ex (IDEX_ALUOp, IDEX_RD1, B, ALUOut, Zero);
-   //////////////////////////////////////////////////
-   //ALUControl ALUCtrl(IDEX_ALUOp, IDEX_SignExt[5:0], ALUctl); // ALU control unit
-    //////////////////////////////////////////////////
-   //assign B  = (IDEX_ALUSrc) ? IDEX_SignExt: IDEX_RD2;        // ALUSrc Mux 
-   //assign WR = (IDEX_RegDst) ? IDEX_rd: IDEX_rt;              // RegDst Mux
-  //assign wr
+   //assign wr
    mux2bit2x1 mx4( IDEX_rt,IDEX_rd,IDEX_RegDst,WR);
    //assign B
    mux16bit2x1 mx2(IDEX_RD2,IDEX_SignExt,IDEX_ALUSrc,B);
 
-
+  // branch control
   branchctrl branchCtr (EXMEM_Branch,EXMEM_Zero,BranchOut);
-  mux16bit2x1 muxBranch (PCplus4,EXMEM_Target, BranchOut, testtarget);
-
-  Jumpctr jum (IFID_PCplus4,IFID_IR,Jump_Address);
-
-  mux16bit2x1 muxJump (testtarget,Jump_Address, jumpop, NextPC);
+  mux16bit2x1 muxBranch (PCplus2,EXMEM_Target, BranchOut, testtarget);
+  
+  
+  
   
 // MEM
    reg MEMWB_MemtoReg;
@@ -517,21 +498,20 @@ endmodule
     MEMWB_RegWrite=0;MEMWB_MemtoReg=0;
    end
 
-    wire [15:0]pcchange;
+    
 // Running the pipeline
    always @(negedge clock) begin 
 // IF
 
     PC <= NextPC;
-    //PC <= pcchange;
-    IFID_PCplus4 <= PCplus4;
+    IFID_PCplus2 <= PCplus2;
     IFID_IR <= IMemory[PC>>1];
 // ID
     IDEX_IR <= IFID_IR; // For monitoring the pipeline
     //{IDEX_RegDst,IDEX_ALUSrc,IDEX_MemtoReg,IDEX_RegWrite,IDEX_MemWrite,IDEX_Branch,IDEX_ALUOp} <= Control;  
       //MemtoReg, MemWrite_ branchop_RegDst_ALUSrc,RegWrite_ALUctl
     {IDEX_MemtoReg,IDEX_MemWrite,IDEX_Branch,IDEX_RegDst,IDEX_ALUSrc,IDEX_RegWrite,IDEX_ALUOp} <= control;
-    IDEX_PCplus4 <= IFID_PCplus4;
+    IDEX_PCplus2 <= IFID_PCplus2;
     IDEX_RD1 <= RD1; 
     IDEX_RD2 <= RD2;
     IDEX_SignExt <= SignExtend;
@@ -571,48 +551,118 @@ module test ();
   always #1 clock = ~clock;
   initial begin
     $display ("PC   IFID_IR  IDEX_IR  EXMEM_IR MEMWB_IR  WD");
-    $monitor ("%3d  %h %h %h %b %2d %b %2d ",PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD , branchop, testtarget);
+    $monitor ("%3d  %h %h %h %h %2d %b %2d ",PC,IFID_IR,IDEX_IR,EXMEM_IR,MEMWB_IR,WD , branchop, testtarget);
     clock = 1;
     #100 $finish;
   end
 endmodule
 
-/* Output:
+/* Output: 16 bits- Branch not taken |5-7|=2
 PC   IFID_IR  IDEX_IR  EXMEM_IR MEMWB_IR  WD
-  0  00000000 xxxxxxxx xxxxxxxx xxxxxxxx  x
-  4  8c090000 00000000 xxxxxxxx xxxxxxxx  x
-  8  8c0a0004 8c090000 00000000 xxxxxxxx  x
- 12  00000000 8c0a0004 8c090000 00000000  0
- 16  00000000 00000000 8c0a0004 8c090000  5
- 20  00000000 00000000 00000000 8c0a0004  7
- 24  012a582a 00000000 00000000 00000000  0
- 28  00000000 012a582a 00000000 00000000  0
- 32  00000000 00000000 012a582a 00000000  0
- 36  00000000 00000000 00000000 012a582a  1
- 40  11600005 00000000 00000000 00000000  0
- 44  00000000 11600005 00000000 00000000  0
- 48  00000000 00000000 11600005 00000000  0
- 52  00000000 00000000 00000000 11600005  1
- 56  ac090004 00000000 00000000 00000000  0
- 60  ac0a0000 ac090004 00000000 00000000  0
- 64  00000000 ac0a0000 ac090004 00000000  0
- 68  00000000 00000000 ac0a0000 ac090004  4
- 72  00000000 00000000 00000000 ac0a0000  0
- 76  8c090000 00000000 00000000 00000000  0
- 80  8c0a0004 8c090000 00000000 00000000  0
- 84  00000000 8c0a0004 8c090000 00000000  0
- 88  00000000 00000000 8c0a0004 8c090000  7
- 92  00000000 00000000 00000000 8c0a0004  5
- 96  014a5027 00000000 00000000 00000000  0
-100  00000000 014a5027 00000000 00000000  0
-104  00000000 00000000 014a5027 00000000  0
-108  00000000 00000000 00000000 014a5027 -6
-112  214a0001 00000000 00000000 00000000 -1
-116  00000000 214a0001 00000000 00000000 -1
-120  00000000 00000000 214a0001 00000000 -1
-124  00000000 00000000 00000000 214a0001 -5
-128  012a5820 00000000 00000000 00000000  0
-132  xxxxxxxx 012a5820 00000000 00000000  0
-136  xxxxxxxx xxxxxxxx 012a5820 00000000  0
-140  xxxxxxxx xxxxxxxx xxxxxxxx 012a5820  2
-*/
+  0  0000 xxxx xxxx xxxx  x 0  2 
+  2  8100 0000 xxxx xxxx  x 0  4 
+  4  8202 8100 0000 xxxx  x 0  6 
+  6  0000 8202 8100 0000  0 0  8 
+  8  0000 0000 8202 8100  5 0 10 
+ 10  0000 0000 0000 8202  7 0 12 
+ 12  66c0 0000 0000 0000  0 0 14 
+ 14  0000 66c0 0000 0000  0 0 16 
+ 16  0000 0000 66c0 0000  0 0 18 
+ 18  0000 0000 0000 66c0  1 0 20 
+ 20  ac05 0000 0000 0000  0 0 22 
+ 22  0000 ac05 0000 0000  0 0 24 
+ 24  0000 0000 ac05 0000  0 0 26 
+ 26  0000 0000 0000 ac05  1 0 28 
+ 28  9102 0000 0000 0000  0 0 30 
+ 30  9200 9102 0000 0000  0 0 32 
+ 32  0000 9200 9102 0000  0 0 34 
+ 34  0000 0000 9200 9102  2 0 36 
+ 36  0000 0000 0000 9200  0 0 38 
+ 38  8100 0000 0000 0000  0 0 40 
+ 40  8202 8100 0000 0000  0 0 42 
+ 42  0000 8202 8100 0000  0 0 44 
+ 44  0000 0000 8202 8100  7 0 46 
+ 46  0000 0000 0000 8202  5 0 48 
+ 48  4a80 0000 0000 0000  0 0 50 
+ 50  0000 4a80 0000 0000  0 0 52 
+ 52  0000 0000 4a80 0000  0 0 54 
+ 54  0000 0000 0000 4a80 -6 0 56 
+ 56  7a01 0000 0000 0000  0 0 58 
+ 58  0000 7a01 0000 0000  0 0 60 
+ 60  0000 0000 7a01 0000  0 0 62 
+ 62  0000 0000 0000 7a01 -5 0 64 
+ 64  06c0 0000 0000 0000  0 0 66 
+ 66  c00a 06c0 0000 0000  0 0 10 
+ 10  0000 c00a 06c0 0000  0 0 12 
+ 12  66c0 0000 c00a 06c0  2 0 14 
+ 14  0000 66c0 0000 c00a  0 0 16 
+ 16  0000 0000 66c0 0000  0 0 18 
+ 18  0000 0000 0000 66c0  0 0 20 
+ 20  ac05 0000 0000 0000  0 0 22 
+ 22  0000 ac05 0000 0000  0 0 24 
+ 24  0000 0000 ac05 0000  0 1 30 
+ 30  0000 0000 0000 ac05  0 0 32 
+ 32  0000 0000 0000 0000  0 0 34 
+ 34  0000 0000 0000 0000  0 0 36 
+ 36  0000 0000 0000 0000  0 0 38 
+ 38  8100 0000 0000 0000  0 0 40 
+ 40  8202 8100 0000 0000  0 0 42 
+ 42  0000 8202 8100 0000  0 0 44 
+ 44  0000 0000 8202 8100  7 0 46 
+ 46  0000 0000 0000 8202  5 0 48 
+ */
+
+/* Output: 16 bits- Branch taken |5-5|=0
+PC   IFID_IR  IDEX_IR  EXMEM_IR MEMWB_IR  WD
+  0  0000 xxxx xxxx xxxx  x 0  2 
+  2  8100 0000 xxxx xxxx  x 0  4 
+  4  8202 8100 0000 xxxx  x 0  6 
+  6  0000 8202 8100 0000  0 0  8 
+  8  0000 0000 8202 8100  5 0 10 
+ 10  0000 0000 0000 8202  5 0 12 
+ 12  66c0 0000 0000 0000  0 0 14 
+ 14  0000 66c0 0000 0000  0 0 16 
+ 16  0000 0000 66c0 0000  0 0 18 
+ 18  0000 0000 0000 66c0  0 0 20 
+ 20  ac05 0000 0000 0000  0 0 22 
+ 22  0000 ac05 0000 0000  0 0 24 
+ 24  0000 0000 ac05 0000  0 1 30 
+ 30  0000 0000 0000 ac05  0 0 32 
+ 32  0000 0000 0000 0000  0 0 34 
+ 34  0000 0000 0000 0000  0 0 36 
+ 36  0000 0000 0000 0000  0 0 38 
+ 38  8100 0000 0000 0000  0 0 40 
+ 40  8202 8100 0000 0000  0 0 42 
+ 42  0000 8202 8100 0000  0 0 44 
+ 44  0000 0000 8202 8100  5 0 46 
+ 46  0000 0000 0000 8202  5 0 48 
+ 48  4a80 0000 0000 0000  0 0 50 
+ 50  0000 4a80 0000 0000  0 0 52 
+ 52  0000 0000 4a80 0000  0 0 54 
+ 54  0000 0000 0000 4a80 -6 0 56 
+ 56  7a01 0000 0000 0000  0 0 58 
+ 58  0000 7a01 0000 0000  0 0 60 
+ 60  0000 0000 7a01 0000  0 0 62 
+ 62  0000 0000 0000 7a01 -5 0 64 
+ 64  06c0 0000 0000 0000  0 0 66 
+ 66  c00a 06c0 0000 0000  0 0 10 
+ 10  0000 c00a 06c0 0000  0 0 12 
+ 12  66c0 0000 c00a 06c0  0 0 14 
+ 14  0000 66c0 0000 c00a  0 0 16 
+ 16  0000 0000 66c0 0000  0 0 18 
+ 18  0000 0000 0000 66c0  0 0 20 
+ 20  ac05 0000 0000 0000  0 0 22 
+ 22  0000 ac05 0000 0000  0 0 24 
+ 24  0000 0000 ac05 0000  0 1 30 
+ 30  0000 0000 0000 ac05  0 0 32 
+ 32  0000 0000 0000 0000  0 0 34 
+ 34  0000 0000 0000 0000  0 0 36 
+ 36  0000 0000 0000 0000  0 0 38 
+ 38  8100 0000 0000 0000  0 0 40 
+ 40  8202 8100 0000 0000  0 0 42 
+ 42  0000 8202 8100 0000  0 0 44 
+ 44  0000 0000 8202 8100  5 0 46 
+ 46  0000 0000 0000 8202  5 0 48 
+ 48  4a80 0000 0000 0000  0 0 50 
+ 50  0000 4a80 0000 0000  0 0 52 
+ */
